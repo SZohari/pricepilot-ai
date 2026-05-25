@@ -1,0 +1,21 @@
+observation_id,observed_at,product_id,product_query,normalized_product_name,brand,model,source,source_url,seller_name,listed_price,availability_status,warranty,notes
+OBS-20260526-001,2026-05-26,APUL-GPS-1,Apple Watch Ultra GPS,Apple Watch Ultra GPS,Apple,Watch Ultra GPS,Torob,torob.com/p/apple-watch-ultra-gps,TechMart Iran,37200000,available,2 years,Authorized reseller
+OBS-20260526-002,2026-05-26,APUL-GPS-1,Apple Watch Ultra GPS,Apple Watch Ultra GPS,Apple,Watch Ultra GPS,Digikala,digikala.com/product/apple-watch-ultra,ElectroShop,38900000,available,1 year,Fast shipping
+OBS-20260526-003,2026-05-26,APUL-GPS-1,Apple Watch Ultra GPS,Apple Watch Ultra GPS,Apple,Watch Ultra GPS,Torob,torob.com/p/apple-watch-ultra-gps,SmartDevice Co,35400000,available,18 months,Competitive price
+OBS-20260526-004,2026-05-26,APUL-GPS-1,Apple Watch Ultra GPS,Apple Watch Ultra GPS,Apple,Watch Ultra GPS,Digikala,digikala.com/product/apple-watch-ultra,OnlineElectro,36800000,low_stock,2 years,Limited availability
+OBS-20260526-005,2026-05-26,APUL-GPS-1,Apple Watch Ultra GPS,Apple Watch Ultra GPS,Apple,Watch Ultra GPS,Torob,torob.com/p/apple-watch-ultra-gps,Premium Electronics,39500000,available,2 years,Premium seller
+OBS-20260526-006,2026-05-26,GAML-SE-1,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung,Galaxy Watch 6 Classic,Torob,torob.com/p/samsung-galaxy-watch-6,TechMart Iran,18500000,available,1 year,Authorized reseller
+OBS-20260526-007,2026-05-26,GAML-SE-1,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung,Galaxy Watch 6 Classic,Digikala,digikala.com/product/samsung-galaxy-watch-6,ElectroShop,19200000,available,1 year,Free shipping
+OBS-20260526-008,2026-05-26,GAML-SE-1,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung,Galaxy Watch 6 Classic,Torob,torob.com/p/samsung-galaxy-watch-6,SmartDevice Co,17900000,available,18 months,Good price
+OBS-20260526-009,2026-05-26,GAML-SE-1,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung,Galaxy Watch 6 Classic,Digikala,digikala.com/product/samsung-galaxy-watch-6,OnlineElectro,19800000,available,1 year,Latest stock
+OBS-20260526-010,2026-05-26,GAML-SE-1,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung,Galaxy Watch 6 Classic,Torob,torob.com/p/samsung-galaxy-watch-6,Premium Electronics,20100000,low_stock,2 years,Premium seller low stock
+OBS-20260526-011,2026-05-26,FITB-CHG-1,Fitbit Charge 6,Fitbit,Charge 6,Torob,torob.com/p/fitbit-charge-6,TechMart Iran,9200000,available,1 year,Authorized reseller
+OBS-20260526-012,2026-05-26,FITB-CHG-1,Fitbit Charge 6,Fitbit,Charge 6,Digikala,digikala.com/product/fitbit-charge-6,ElectroShop,9800000,available,1 year,Popular item
+OBS-20260526-013,2026-05-26,FITB-CHG-1,Fitbit Charge 6,Fitbit,Charge 6,Torob,torob.com/p/fitbit-charge-6,SmartDevice Co,8900000,available,18 months,Budget option
+OBS-20260526-014,2026-05-26,FITB-CHG-1,Fitbit Charge 6,Fitbit,Charge 6,OnlineStore.ir,onlinestore.ir/fitbit-charge-6,SmallRetailer,9500000,available,1 year,Online only
+OBS-20260526-015,2026-05-26,FITB-CHG-1,Fitbit Charge 6,Fitbit,Charge 6,Digikala,digikala.com/product/fitbit-charge-6,OnlineElectro,10100000,low_stock,1 year,Limited quantity
+OBS-20260526-016,2026-05-26,HWAT-GTA-1,Huawei Watch GT4,Huawei,Watch GT4,Torob,torob.com/p/huawei-watch-gt4,TechMart Iran,8500000,available,2 years,Authorized reseller
+OBS-20260526-017,2026-05-26,HWAT-GTA-1,Huawei Watch GT4,Huawei,Watch GT4,Digikala,digikala.com/product/huawei-watch-gt4,ElectroShop,8900000,available,1 year,Good battery life
+OBS-20260526-018,2026-05-26,HWAT-GTA-1,Huawei Watch GT4,Huawei,Watch GT4,Torob,torob.com/p/huawei-watch-gt4,OnlineElectro,8100000,available,18 months,Competitive pricing
+OBS-20260526-019,2026-05-26,HWAT-GTA-1,Huawei Watch GT4,Huawei,Watch GT4,OnlineStore.ir,onlinestore.ir/huawei-watch-gt4,SmallRetailer,8700000,available,1 year,Online store exclusive
+OBS-20260526-020,2026-05-26,HWAT-GTA-1,Huawei Watch GT4,Huawei,Watch GT4,Digikala,digikala.com/product/huawei-watch-gt4,Premium Electronics,9300000,unavailable,2 years,Out of stock

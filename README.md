@@ -82,7 +82,32 @@ docs/
 - **Risk Level**: Composite risk metric (inventory, margin, volatility, lead time)
 - **Action**: Recommended price change (increase/decrease/hold/urgent_review)
 
-## Using Real Data
+## Real Market Data Foundation (Phase 3)
+
+Phase 3 introduces a data architecture that separates **public market observations** from **retailer internal data**. See [docs/PHASE_3_REAL_DATA_PLAN.md](docs/PHASE_3_REAL_DATA_PLAN.md) for detailed strategy.
+
+### Data Templates
+
+**Public Market Observations** → `data/raw/market_observations_template.csv`
+- Price listings from Torob, Digikala, and online stores
+- Seller names, availability status, warranty info
+- No scraping yet; manual collection is first step
+
+**Retailer Internal Data** → `data/raw/retailer_internal_demo_template.csv`
+- Our current prices, costs, inventory, sales history
+- Confidential to our store (demo/fictional data)
+- Never mixed with public market data
+
+**Global USD Reference** → `data/raw/global_usd_reference_template.csv`
+- Base USD prices for products (anchors for currency adjustments)
+- From official retailers, industry reports (no scraping)
+
+**Market Aggregation Utilities** → `src/data/market_aggregation.py`
+- Pure functions to aggregate market observations
+- Calculates: min/median/max prices, seller counts, price spreads
+- Output feeds into Phase 2 recommendation engine
+
+### Using Real Data
 
 The dashboard supports two data modes:
 
