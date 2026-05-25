@@ -89,6 +89,27 @@ def main():
         st.warning("⏳ Please load data using the sidebar to continue.")
         return
     
+    # Pricing Strategy Selector (Phase 2)
+    st.sidebar.markdown("---")
+    is_phase2 = "our_current_price" in df.columns
+    if is_phase2:
+        st.sidebar.subheader("🎯 Pricing Strategy")
+        selected_strategy = st.sidebar.selectbox(
+            "Strategy",
+            options=[
+                "trust_builder",
+                "balanced",
+                "profit_protection",
+                "market_penetration",
+                "premium_positioning",
+                "clearance_cashflow",
+            ],
+            index=1,  # Default to "balanced"
+            help="Select pricing strategy for Phase 2 recommendations",
+        )
+    else:
+        selected_strategy = None
+    
     # USD Shock Simulator
     st.sidebar.markdown("---")
     usd_shock = st.sidebar.slider(
@@ -102,14 +123,14 @@ def main():
     
     # Generate recommendations with USD shock
     @st.cache_data
-    def get_recommendations(shock, data_hash):
+    def get_recommendations(shock, data_hash, strategy_override):
         recommendations = []
         for _, row in df.iterrows():
-            rec = recommend_price(row.to_dict(), usd_shock=shock)
+            rec = recommend_price(row.to_dict(), usd_shock=shock, strategy=strategy_override)
             recommendations.append(rec)
         return pd.DataFrame(recommendations)
     
-    recs_df = get_recommendations(usd_shock, hash(df.values.tobytes()))
+    recs_df = get_recommendations(usd_shock, hash(df.values.tobytes()), selected_strategy if is_phase2 else None)
     
     # KPI Section
     st.sidebar.markdown("---")
@@ -188,51 +209,134 @@ def main():
         st.subheader("Price Recommendations")
         st.markdown(f"Showing {len(filtered_recs)} of {len(recs_df)} products")
         
-        # Prepare display columns, robust to missing metadata
-        display_fields = [
-            "product_id",
-            "product_name",
-            "brand",
-            "current_price",
-            "recommended_price",
-            "action",
-            "risk_level",
-            "current_margin",
-            "expected_margin",
-        ]
+        # Prepare display columns based on schema (Phase 2 or MVP)
+        if is_phase2:
+            # Phase 2 schema: show market-aware and strategy columns
+            display_fields = [
+                "product_name",
+                "brand",
+                "base_usd_price",
+                "usd_rate",
+                "theoretical_toman_price",
+                "iran_market_premium_pct",
+                "market_min_price",
+                "market_median_price",
+                "market_max_price",
+                "our_current_price",
+                "recommended_price",
+                "selected_strategy",
+                "action",
+                "risk_level",
+            ]
+        else:
+            # MVP schema: show traditional columns
+            display_fields = [
+                "product_id",
+                "product_name",
+                "brand",
+                "current_price",
+                "recommended_price",
+                "action",
+                "risk_level",
+                "current_margin",
+                "expected_margin",
+            ]
         
         # Ensure all display fields exist
         for col in display_fields:
             if col not in filtered_recs.columns:
-                if col in ["brand"]:
+                if col in ["brand", "product_id", "product_name", "action", "risk_level", "selected_strategy"]:
                     filtered_recs[col] = "Unknown"
-                elif col in ["current_price", "recommended_price", "current_margin", "expected_margin"]:
+                elif col in ["base_usd_price", "usd_rate", "theoretical_toman_price", "iran_market_premium_pct", 
+                            "market_min_price", "market_median_price", "market_max_price", "our_current_price",
+                            "current_price", "recommended_price", "current_margin", "expected_margin"]:
                     filtered_recs[col] = 0.0
                 else:
-                    filtered_recs[col] = "Unknown"
+                    filtered_recs[col] = None
         
         display_df = filtered_recs[display_fields].copy()
         
-        # Format prices using toman formatter
-        display_df["Current Price"] = display_df["current_price"].apply(lambda x: format_toman(x))
-        display_df["Recommended Price"] = display_df["recommended_price"].apply(lambda x: format_toman(x))
-        display_df["Action"] = display_df["action"].apply(format_action_label)
-        display_df["Risk"] = display_df["risk_level"].apply(format_risk_label)
-        display_df["Current Margin"] = display_df["current_margin"].apply(format_margin)
-        display_df["Expected Margin"] = display_df["expected_margin"].apply(format_margin)
+        # Format columns
+        if "base_usd_price" in display_df.columns:
+            display_df["Base USD Price"] = display_df["base_usd_price"].apply(
+                lambda x: f"${x:.2f}" if x and x > 0 else "N/A"
+            )
+        if "usd_rate" in display_df.columns:
+            display_df["USD Rate"] = display_df["usd_rate"].apply(
+                lambda x: f"{x:,.0f}" if x and x > 0 else "N/A"
+            )
+        if "theoretical_toman_price" in display_df.columns:
+            display_df["Theoretical Toman"] = display_df["theoretical_toman_price"].apply(
+                lambda x: format_toman(x) if x and x > 0 else "N/A"
+            )
+        if "iran_market_premium_pct" in display_df.columns:
+            display_df["Iran Premium %"] = display_df["iran_market_premium_pct"].apply(
+                lambda x: format_percent(x) if x is not None else "N/A"
+            )
+        if "market_min_price" in display_df.columns:
+            display_df["Market Min"] = display_df["market_min_price"].apply(
+                lambda x: format_toman(x) if x and x > 0 else "N/A"
+            )
+        if "market_median_price" in display_df.columns:
+            display_df["Market Median"] = display_df["market_median_price"].apply(
+                lambda x: format_toman(x) if x and x > 0 else "N/A"
+            )
+        if "market_max_price" in display_df.columns:
+            display_df["Market Max"] = display_df["market_max_price"].apply(
+                lambda x: format_toman(x) if x and x > 0 else "N/A"
+            )
+        if "our_current_price" in display_df.columns:
+            display_df["Our Current"] = display_df["our_current_price"].apply(
+                lambda x: format_toman(x) if x and x > 0 else "N/A"
+            )
+        if "current_price" in display_df.columns and "Our Current" not in display_df.columns:
+            display_df["Current Price"] = display_df["current_price"].apply(lambda x: format_toman(x))
+        if "recommended_price" in display_df.columns:
+            display_df["Recommended"] = display_df["recommended_price"].apply(lambda x: format_toman(x))
+        if "selected_strategy" in display_df.columns:
+            display_df["Strategy"] = display_df["selected_strategy"].apply(
+                lambda x: x.replace("_", " ").title() if x else "N/A"
+            )
+        if "action" in display_df.columns:
+            display_df["Action"] = display_df["action"].apply(format_action_label)
+        if "risk_level" in display_df.columns:
+            display_df["Risk"] = display_df["risk_level"].apply(format_risk_label)
+        if "current_margin" in display_df.columns:
+            display_df["Current Margin"] = display_df["current_margin"].apply(format_margin)
+        if "expected_margin" in display_df.columns:
+            display_df["Expected Margin"] = display_df["expected_margin"].apply(format_margin)
         
-        # Select columns for display
-        display_cols = display_df[[
-            "product_id",
-            "product_name",
-            "brand",
-            "Current Price",
-            "Recommended Price",
-            "Action",
-            "Risk",
-            "Current Margin",
-            "Expected Margin",
-        ]]
+        # Select final display columns - avoid duplicates
+        if is_phase2:
+            display_cols_names = [
+                "product_name",
+                "brand",
+                "Base USD Price",
+                "Theoretical Toman",
+                "Iran Premium %",
+                "Market Median",
+                "Our Current",
+                "Recommended",
+                "Strategy",
+                "Action",
+                "Risk",
+            ]
+        else:
+            display_cols_names = [
+                "product_id",
+                "product_name",
+                "brand",
+                "Current Price",
+                "Recommended",
+                "Action",
+                "Risk",
+                "Current Margin",
+                "Expected Margin",
+            ]
+        
+        # Filter to only available columns
+        available_cols = [c for c in display_cols_names if c in display_df.columns]
+        display_cols = display_df[available_cols]
         
         st.dataframe(display_cols, use_container_width=True, hide_index=True)
     
@@ -272,6 +376,51 @@ def main():
 )
             st.plotly_chart(fig_risk, use_container_width=True)
         
+        # Phase 2 specific analytics
+        if is_phase2 and "iran_market_premium_pct" in filtered_recs.columns:
+            st.subheader("🌍 Iran Market Premium Analysis")
+            premium_fig = px.histogram(
+                filtered_recs,
+                x="iran_market_premium_pct",
+                nbins=15,
+                title="Iran Market Premium Distribution",
+                labels={"iran_market_premium_pct": "Market Premium %"},
+            )
+            st.plotly_chart(premium_fig, use_container_width=True)
+        
+        # Price comparison chart
+        if "current_price" in filtered_recs.columns and "recommended_price" in filtered_recs.columns:
+            st.subheader("💰 Current vs Recommended Price")
+            comparison_data = filtered_recs[[
+                "product_name",
+                "current_price",
+                "recommended_price"
+            ]].head(15).copy()  # Limit to 15 for readability
+            
+            comparison_fig = go.Figure(
+                data=[
+                    go.Bar(
+                        x=comparison_data["product_name"],
+                        y=comparison_data["current_price"],
+                        name="Current Price",
+                        marker_color="lightblue",
+                    ),
+                    go.Bar(
+                        x=comparison_data["product_name"],
+                        y=comparison_data["recommended_price"],
+                        name="Recommended Price",
+                        marker_color="darkblue",
+                    ),
+                ]
+            )
+            comparison_fig.update_layout(
+                xaxis_title="Product",
+                yaxis_title="Price (Toman)",
+                hovermode="x unified",
+                height=400,
+            )
+            st.plotly_chart(comparison_fig, use_container_width=True)
+        
         # Margin analysis
         st.subheader("💰 Current vs Expected Margin")
         margin_fig = go.Figure(
@@ -297,7 +446,6 @@ def main():
             height=400,
         )
         st.plotly_chart(margin_fig, use_container_width=True)
-    
     # Tab 3: USD Shock Simulator
     with tab3:
         st.subheader("💵 USD Exchange Rate Shock Simulator")
@@ -356,15 +504,183 @@ def main():
             
             product_rec = filtered_recs[filtered_recs["product_name"] == selected_product].iloc[0]
             
-            # Price comparison
+            # Global Reference Data (Phase 2)
+            if is_phase2:
+                st.markdown("### 🌍 Global Reference")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    base_usd = product_rec.get("base_usd_price", 0)
+                    st.metric(
+                        "Base USD Price",
+                        f"${base_usd:.2f}" if base_usd else "N/A",
+                    )
+                
+                with col2:
+                    usd_rate = product_rec.get("usd_rate", 0)
+                    st.metric(
+                        "USD Rate",
+                        f"{usd_rate:,.0f}" if usd_rate else "N/A",
+                    )
+                
+                with col3:
+                    theo_toman = product_rec.get("theoretical_toman_price", 0)
+                    st.metric(
+                        "Theoretical Toman",
+                        format_toman(theo_toman) if theo_toman else "N/A",
+                    )
+                
+                st.markdown("---")
+                
+                # Market Data (Phase 2)
+                st.markdown("### 📊 Market Data")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    iran_prem = product_rec.get("iran_market_premium_pct")
+                    st.metric(
+                        "Iran Market Premium",
+                        format_percent(iran_prem) if iran_prem is not None else "N/A",
+                    )
+                
+                with col2:
+                    st.metric(
+                        "Seller Count",
+                        f"{int(product_rec.get('seller_count', 0))}" if product_rec.get('seller_count') else "N/A",
+                    )
+                
+                with col3:
+                    avail_sellers = product_rec.get("available_seller_count", 0)
+                    st.metric(
+                        "Available Sellers",
+                        f"{int(avail_sellers)}" if avail_sellers else "N/A",
+                    )
+                
+                st.markdown("---")
+                
+                # Market Price Range
+                st.markdown("### 💹 Market Price Range")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    market_min = product_rec.get("market_min_price", 0)
+                    st.metric(
+                        "Market Min",
+                        format_toman(market_min) if market_min else "N/A",
+                    )
+                
+                with col2:
+                    market_med = product_rec.get("market_median_price", 0)
+                    st.metric(
+                        "Market Median",
+                        format_toman(market_med) if market_med else "N/A",
+                    )
+                
+                with col3:
+                    market_max = product_rec.get("market_max_price", 0)
+                    st.metric(
+                        "Market Max",
+                        format_toman(market_max) if market_max else "N/A",
+                    )
+                
+                if product_rec.get("torob_min_price") or product_rec.get("digikala_price"):
+                    st.markdown("---")
+                    st.markdown("### 🛍️ Platform Prices")
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        torob_min = product_rec.get("torob_min_price", 0)
+                        st.metric(
+                            "Torob Min",
+                            format_toman(torob_min) if torob_min else "N/A",
+                        )
+                    
+                    with col2:
+                        torob_med = product_rec.get("torob_median_price", 0)
+                        st.metric(
+                            "Torob Median",
+                            format_toman(torob_med) if torob_med else "N/A",
+                        )
+                    
+                    with col3:
+                        digikala = product_rec.get("digikala_price", 0)
+                        st.metric(
+                            "Digikala",
+                            format_toman(digikala) if digikala else "N/A",
+                        )
+                
+                st.markdown("---")
+                
+                # Our Internal Data (Phase 2)
+                st.markdown("### 🏪 Our Retail Data")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    our_curr = product_rec.get("our_current_price", 0)
+                    st.metric(
+                        "Our Current Price",
+                        format_toman(our_curr) if our_curr else "N/A",
+                    )
+                
+                with col2:
+                    our_cost = product_rec.get("our_cost_price", 0)
+                    st.metric(
+                        "Our Cost Price",
+                        format_toman(our_cost) if our_cost else "N/A",
+                    )
+                
+                with col3:
+                    our_inv = product_rec.get("our_inventory", 0)
+                    st.metric(
+                        "Our Inventory",
+                        f"{int(our_inv)}" if our_inv else "N/A",
+                    )
+                
+                st.markdown("---")
+                
+                # Our Sales and Targets (Phase 2)
+                st.markdown("### 📈 Our Performance")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    sales_7d = product_rec.get("our_sales_7d", 0)
+                    st.metric(
+                        "Sales (7d)",
+                        f"{int(sales_7d)}" if sales_7d else "0",
+                    )
+                
+                with col2:
+                    sales_30d = product_rec.get("our_sales_30d", 0)
+                    st.metric(
+                        "Sales (30d)",
+                        f"{int(sales_30d)}" if sales_30d else "0",
+                    )
+                
+                with col3:
+                    target_margin = product_rec.get("our_target_margin", 0)
+                    st.metric(
+                        "Target Margin",
+                        format_percent(target_margin) if target_margin else "N/A",
+                    )
+                
+                st.markdown("---")
+            
+            # Price comparison (MVP or Phase 2)
             st.markdown("### 💰 Price Information")
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.metric(
-                    "Current Price",
-                    format_toman(product_rec["current_price"]),
-                )
+                if is_phase2:
+                    our_curr = product_rec.get("our_current_price", 0)
+                    st.metric(
+                        "Current Price",
+                        format_toman(our_curr) if our_curr else "N/A",
+                    )
+                else:
+                    st.metric(
+                        "Current Price",
+                        format_toman(product_rec.get("current_price", 0)),
+                    )
             
             with col2:
                 st.metric(
@@ -373,14 +689,15 @@ def main():
                 )
             
             with col3:
-                price_diff_pct = (
-                    (product_rec["recommended_price"] - product_rec["current_price"]) / 
-                    product_rec["current_price"] * 100
-                )
-                st.metric(
-                    "Price Change",
-                    f"{price_diff_pct:+.1f}%",
-                )
+                current_price = product_rec.get("our_current_price") or product_rec.get("current_price", 0)
+                if current_price > 0:
+                    price_diff_pct = (
+                        (product_rec["recommended_price"] - current_price) / current_price * 100
+                    )
+                    st.metric(
+                        "Price Change",
+                        f"{price_diff_pct:+.1f}%",
+                    )
             
             st.markdown("---")
             
@@ -389,21 +706,54 @@ def main():
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.metric("Cost Price", format_toman(product_rec.get("cost_price", 0)))
+                cost_price = product_rec.get("our_cost_price") or product_rec.get("cost_price", 0)
+                st.metric("Cost Price", format_toman(cost_price))
             
             with col2:
                 st.metric(
                     "Current Margin",
-                    format_margin(product_rec["current_margin"]),
+                    format_margin(product_rec.get("current_margin", 0)),
                 )
             
             with col3:
                 st.metric(
                     "Expected Margin",
-                    format_margin(product_rec["expected_margin"]),
+                    format_margin(product_rec.get("expected_margin", 0)),
                 )
             
             st.markdown("---")
+            
+            # Strategy and Pricing (Phase 2)
+            if is_phase2 and product_rec.get("strategy_prices"):
+                st.markdown("### 🎯 Strategy Price Options")
+                
+                strategy_prices = product_rec.get("strategy_prices", {})
+                selected_strat = product_rec.get("selected_strategy", "N/A")
+                
+                # Display all strategy prices
+                strategy_labels = {
+                    "trust_builder": "🤝 Trust Builder",
+                    "balanced": "⚖️ Balanced",
+                    "profit_protection": "💰 Profit Protection",
+                    "market_penetration": "🎯 Market Penetration",
+                    "premium_positioning": "👑 Premium Positioning",
+                    "clearance_cashflow": "🏷️ Clearance / Cashflow",
+                }
+                
+                cols = st.columns(3)
+                col_idx = 0
+                for strategy_key, price in strategy_prices.items():
+                    with cols[col_idx % 3]:
+                        label = strategy_labels.get(strategy_key, strategy_key.replace("_", " ").title())
+                        is_selected = (strategy_key == selected_strat)
+                        
+                        if is_selected:
+                            st.success(f"**{label}**\n{format_toman(price)}\n✓ Selected")
+                        else:
+                            st.info(f"**{label}**\n{format_toman(price)}")
+                    col_idx += 1
+                
+                st.markdown("---")
             
             # Risk and positioning
             st.markdown("### ⚠️ Risk & Market Position")
@@ -433,17 +783,17 @@ def main():
             st.markdown("### 📝 Recommendation Details")
             
             st.markdown("**Competitor Position:**")
-            st.info(product_rec["competitor_position"])
+            st.info(product_rec.get("competitor_position", "N/A"))
             
             st.markdown("**Triggered Rules:**")
-            if product_rec["triggered_rules"]:
+            if product_rec.get("triggered_rules"):
                 for rule in product_rec["triggered_rules"]:
                     st.write(f"• {rule.replace('_', ' ').title()}")
             else:
                 st.write("No specific rules triggered.")
             
             st.markdown("**Full Explanation:**")
-            st.markdown(product_rec["explanation"])
+            st.markdown(product_rec.get("explanation", "N/A"))
 
 
 if __name__ == "__main__":

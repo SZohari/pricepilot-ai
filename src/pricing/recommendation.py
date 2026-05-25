@@ -9,7 +9,7 @@ from src.pricing.strategies import (
 )
 
 
-def recommend_price(row: dict, usd_shock: float = 0.0) -> dict:
+def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> dict:
     """
     Generate a pricing recommendation for a product.
     
@@ -20,6 +20,7 @@ def recommend_price(row: dict, usd_shock: float = 0.0) -> dict:
     Args:
         row: Product data dictionary with required fields
         usd_shock: Additional USD rate change for simulation (in percentage)
+        strategy: (Optional) Override the product's our_strategy with this value for Phase 2 data
         
     Returns:
         Dictionary with recommendation details including strategy-based pricing (if Phase 2)
@@ -40,7 +41,8 @@ def recommend_price(row: dict, usd_shock: float = 0.0) -> dict:
         our_cost_price = row.get("our_cost_price", 0.0)
         our_inventory = row.get("our_inventory", 0)
         our_target_margin = row.get("our_target_margin", 0.25)
-        our_strategy = row.get("our_strategy", "balanced")
+        # Use provided strategy override, fallback to row's strategy, default to "balanced"
+        our_strategy = strategy if strategy is not None else row.get("our_strategy", "balanced")
         
         market_median = row.get("market_median_price", our_current_price)
         market_min = row.get("market_min_price", our_current_price * 0.95)
