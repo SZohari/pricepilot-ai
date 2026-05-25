@@ -1,0 +1,11 @@
+product_id,product_name,brand,model,category,current_price,cost_price,inventory,competitor_min_price,competitor_median_price,competitor_max_price,usd_rate,usd_change_7d,sales_7d,sales_30d,views_30d,conversion_rate,target_margin,supplier_lead_time_days
+SW001,Fitbit Inspire 3,Fitbit,Inspire 3,Budget,3500000,1800000,45,3400000,3600000,3800000,45100,1.5,12,35,520,0.067,0.30,14
+SW002,Samsung Galaxy Watch 6,Samsung,Galaxy Watch 6,Premium,8500000,4200000,28,8200000,8600000,9000000,45100,1.5,8,25,380,0.066,0.35,10
+SW003,Apple Watch Series 8,Apple,Series 8,Premium,12000000,6000000,15,11500000,12200000,12800000,45100,1.5,5,18,290,0.062,0.35,7
+SW004,Garmin Fenix 6X,Garmin,Fenix 6X,Premium,7500000,3500000,22,7200000,7600000,8100000,45100,1.5,6,20,310,0.065,0.35,12
+SW005,Xiaomi Mi Band 7,Xiaomi,Mi Band 7,Budget,1200000,600000,120,1100000,1250000,1400000,45100,1.5,45,120,1800,0.067,0.25,5
+SW006,Polar Vantage M2,Polar,Vantage M2,Mid-Range,5200000,2400000,35,5000000,5300000,5600000,45100,1.5,9,28,420,0.067,0.32,11
+SW007,Honor Band 6,Honor,Band 6,Budget,2200000,1100000,65,2100000,2300000,2500000,45100,1.5,18,55,850,0.065,0.25,8
+SW008,Amazfit GTR 3,Amazfit,GTR 3,Mid-Range,4800000,2200000,40,4600000,4900000,5200000,45100,1.5,11,32,480,0.067,0.33,9
+SW009,TomTom Spark 3,TomTom,Spark 3,Mid-Range,4200000,1900000,30,4000000,4300000,4600000,45100,1.5,7,22,330,0.067,0.32,13
+SW010,Fossil Gen 6,Fossil,Gen 6,Mid-Range,6500000,3000000,25,6200000,6600000,7000000,45100,1.5,6,19,285,0.067,0.33,15
