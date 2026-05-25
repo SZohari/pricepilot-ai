@@ -3,43 +3,97 @@
 from typing import Dict, List
 from src.pricing.rules import calculate_current_margin, apply_pricing_rules, determine_action
 from src.pricing.risk import calculate_risk_level
+from src.pricing.strategies import (
+    select_strategy_price,
+    _calculate_iran_market_premium,
+)
 
 
 def recommend_price(row: dict, usd_shock: float = 0.0) -> dict:
     """
     Generate a pricing recommendation for a product.
     
+    Supports both MVP (old) and Phase 2 (new) schema fields.
+    MVP fields: current_price, cost_price, competitor_median_price, etc.
+    Phase 2 fields: our_current_price, our_cost_price, market_median_price, our_strategy, etc.
+    
     Args:
         row: Product data dictionary with required fields
         usd_shock: Additional USD rate change for simulation (in percentage)
         
     Returns:
-        Dictionary with recommendation details
+        Dictionary with recommendation details including strategy-based pricing (if Phase 2)
     """
-    # Extract required fields
+    # Determine if this is Phase 2 data (has our_current_price) or MVP data (has current_price)
+    is_phase2 = "our_current_price" in row
+    
+    # Extract product metadata
     product_id = row.get("product_id", "UNKNOWN")
     product_name = row.get("product_name", "Unknown Product")
-    current_price = row.get("current_price", 0.0)
-    cost_price = row.get("cost_price", 0.0)
-    target_margin = row.get("target_margin", 0.25)
-    inventory = row.get("inventory", 0)
-    competitor_median = row.get("competitor_median_price", current_price)
-    competitor_min = row.get("competitor_min_price", current_price * 0.95)
-    competitor_max = row.get("competitor_max_price", current_price * 1.05)
-    usd_change = row.get("usd_change_7d", 0.0)
-    supplier_lead_time = row.get("supplier_lead_time_days", 10)
-    # Metadata fields (preserve if present)
     brand = row.get("brand", "Unknown")
     model = row.get("model", "Unknown")
     category = row.get("category", "Unknown")
     
-    # Calculate current margin
+    if is_phase2:
+        # Phase 2: Use new schema fields
+        our_current_price = row.get("our_current_price", 0.0)
+        our_cost_price = row.get("our_cost_price", 0.0)
+        our_inventory = row.get("our_inventory", 0)
+        our_target_margin = row.get("our_target_margin", 0.25)
+        our_strategy = row.get("our_strategy", "balanced")
+        
+        market_median = row.get("market_median_price", our_current_price)
+        market_min = row.get("market_min_price", our_current_price * 0.95)
+        market_max = row.get("market_max_price", our_current_price * 1.05)
+        
+        # For backward compatibility, also set MVP field names if not present
+        current_price = our_current_price
+        cost_price = our_cost_price
+        inventory = our_inventory
+        target_margin = our_target_margin
+        competitor_median = market_median
+        competitor_min = market_min
+        competitor_max = market_max
+        
+        # Phase 2 specific fields
+        theoretical_toman = row.get("theoretical_toman_price", 0.0)
+        iran_premium = _calculate_iran_market_premium(market_median, theoretical_toman)
+        
+        # Calculate strategy-based prices
+        strategy_result = select_strategy_price(row, our_strategy)
+        recommended_price = strategy_result["selected_strategy_price"]
+        strategy_prices = strategy_result["strategy_prices"]
+        strategy_explanation = strategy_result["strategy_explanation"]
+        
+    else:
+        # MVP: Use old schema fields
+        current_price = row.get("current_price", 0.0)
+        cost_price = row.get("cost_price", 0.0)
+        inventory = row.get("inventory", 0)
+        target_margin = row.get("target_margin", 0.25)
+        competitor_median = row.get("competitor_median_price", current_price)
+        competitor_min = row.get("competitor_min_price", current_price * 0.95)
+        competitor_max = row.get("competitor_max_price", current_price * 1.05)
+        
+        # Phase 2 fields set to None for MVP
+        theoretical_toman = None
+        iran_premium = None
+        strategy_prices = None
+        strategy_explanation = None
+        our_strategy = None
+    
+    # Optional fields (both schemas)
+    usd_change = row.get("usd_change_7d", 0.0)
+    supplier_lead_time = row.get("supplier_lead_time_days", 10)
+    
+    # If Phase 2 but no strategy-based pricing yet, use MVP rules as fallback
+    if not is_phase2 or recommended_price is None:
+        recommended_price, triggered_rules = apply_pricing_rules(row, usd_shock)
+    else:
+        triggered_rules = []
+    
+    # Calculate margins
     current_margin = calculate_current_margin(current_price, cost_price)
-    
-    # Apply pricing rules
-    recommended_price, triggered_rules = apply_pricing_rules(row, usd_shock)
-    
-    # Calculate expected margin with recommended price
     expected_margin = calculate_current_margin(recommended_price, cost_price)
     
     # Calculate risk level
@@ -72,21 +126,27 @@ def recommend_price(row: dict, usd_shock: float = 0.0) -> dict:
         competitor_position = "Above maximum (aggressive premium)"
     
     # Build explanation
-    explanation = _build_explanation(
-        action=action,
-        current_price=current_price,
-        recommended_price=recommended_price,
-        current_margin=current_margin,
-        target_margin=target_margin,
-        expected_margin=expected_margin,
-        inventory=inventory,
-        competitor_median=competitor_median,
-        usd_change=total_usd_change,
-        triggered_rules=triggered_rules,
-        risk_level=risk_level,
-    )
+    if strategy_explanation is None:
+        # MVP: Use old explanation logic
+        explanation = _build_explanation(
+            action=action,
+            current_price=current_price,
+            recommended_price=recommended_price,
+            current_margin=current_margin,
+            target_margin=target_margin,
+            expected_margin=expected_margin,
+            inventory=inventory,
+            competitor_median=competitor_median,
+            usd_change=total_usd_change,
+            triggered_rules=triggered_rules,
+            risk_level=risk_level,
+        )
+    else:
+        # Phase 2: Use strategy explanation
+        explanation = strategy_explanation
     
-    return {
+    # Build recommendation result
+    result = {
         "product_id": product_id,
         "product_name": product_name,
         "brand": brand,
@@ -102,6 +162,21 @@ def recommend_price(row: dict, usd_shock: float = 0.0) -> dict:
         "explanation": explanation,
         "triggered_rules": triggered_rules,
     }
+    
+    # Add Phase 2 fields if applicable
+    if is_phase2:
+        result["theoretical_toman_price"] = float(theoretical_toman) if theoretical_toman else None
+        result["iran_market_premium_pct"] = float(iran_premium) if iran_premium is not None else None
+        result["strategy_prices"] = strategy_prices
+        result["selected_strategy"] = our_strategy
+        result["selected_strategy_price"] = float(recommended_price)
+    
+    # Add common fields
+    result["competitor_position"] = competitor_position
+    result["explanation"] = explanation
+    result["triggered_rules"] = triggered_rules
+    
+    return result
 
 
 def _build_explanation(

@@ -2,6 +2,7 @@
 
 import pytest
 import sys
+import pandas as pd
 from pathlib import Path
 
 # Add src to path
@@ -15,12 +16,14 @@ from src.data.sample_data_generator import generate_smartwatch_data
 
 @pytest.fixture
 def sample_product():
-    """Create a sample product for testing."""
+    """Create a sample product for testing (backward compatible fields for old pricing logic)."""
     return {
         "product_id": "SW001",
         "product_name": "Test Smartwatch",
         "brand": "TestBrand",
         "model": "Test",
+        "category": "Premium",
+        # Old schema fields (for backward compatibility with existing pricing rules)
         "current_price": 2_000_000.0,
         "cost_price": 1_000_000.0,
         "inventory": 50,
@@ -225,23 +228,18 @@ class TestDataGeneration:
         assert len(df) == 10
         assert len(df.columns) > 0
     
-    def test_data_has_required_columns(self):
-        """Test that generated data has required columns."""
+    def test_data_has_phase2_schema(self):
+        """Test that generated data has Phase 2 schema columns (not old MVP schema)."""
         df = generate_smartwatch_data(n_products=5)
         
-        required_columns = [
-            "product_id",
-            "product_name",
-            "current_price",
-            "cost_price",
-            "inventory",
-            "competitor_median_price",
-            "usd_change_7d",
-            "target_margin",
+        phase2_columns = [
+            "product_id", "product_name", "brand", "model", "category",
+            "base_usd_price", "base_usd_price_source", "usd_rate",
+            "theoretical_toman_price",
         ]
         
-        for col in required_columns:
-            assert col in df.columns
+        for col in phase2_columns:
+            assert col in df.columns, f"Missing Phase 2 column: {col}"
     
     def test_deterministic_generation(self):
         """Test that same seed produces same data."""
@@ -325,6 +323,439 @@ class TestDataGeneration:
         assert rec["brand"] == "TestBrand"
         assert rec["model"] == "TestModel"
         assert rec["category"] == "Premium"
+
+
+class TestPhase2DataModel:
+    """Test Phase 2 data model and schema requirements."""
+    
+    def test_generate_data_has_phase2_columns(self):
+        """Test that generated data includes all Phase 2 required columns."""
+        df = generate_smartwatch_data(n_products=10)
+        
+        required_phase2_cols = [
+            "product_id",
+            "product_name",
+            "brand",
+            "model",
+            "category",
+            "base_usd_price",
+            "base_usd_price_source",
+            "usd_rate",
+            "theoretical_toman_price",
+            "market_min_price",
+            "market_median_price",
+            "market_max_price",
+            "market_avg_price",
+            "seller_count",
+            "available_seller_count",
+            "torob_min_price",
+            "torob_median_price",
+            "digikala_price",
+            "our_current_price",
+            "our_cost_price",
+            "our_inventory",
+            "our_sales_7d",
+            "our_sales_30d",
+            "our_target_margin",
+            "our_strategy",
+            "observed_at",
+        ]
+        
+        for col in required_phase2_cols:
+            assert col in df.columns, f"Missing Phase 2 column: {col}"
+    
+    def test_theoretical_toman_price_calculation(self):
+        """Test that theoretical_toman_price ≈ base_usd_price * usd_rate (within rounding)."""
+        df = generate_smartwatch_data(n_products=20)
+        
+        for idx, row in df.iterrows():
+            expected = row["base_usd_price"] * row["usd_rate"]
+            actual = row["theoretical_toman_price"]
+            # Allow small rounding differences
+            assert abs(actual - expected) < 1.0, f"Row {idx}: theoretical_toman_price mismatch"
+    
+    def test_market_prices_ordered_correctly(self):
+        """Test that market_min_price <= market_median_price <= market_max_price."""
+        df = generate_smartwatch_data(n_products=20)
+        
+        for idx, row in df.iterrows():
+            assert row["market_min_price"] <= row["market_median_price"], \
+                f"Row {idx}: market_min_price > market_median_price"
+            assert row["market_median_price"] <= row["market_max_price"], \
+                f"Row {idx}: market_median_price > market_max_price"
+    
+    def test_our_current_price_above_cost(self):
+        """Test that our_current_price > our_cost_price for all products."""
+        df = generate_smartwatch_data(n_products=20)
+        
+        for idx, row in df.iterrows():
+            assert row["our_current_price"] > row["our_cost_price"], \
+                f"Row {idx}: our_current_price <= our_cost_price"
+    
+    def test_seller_count_and_availability(self):
+        """Test that available_seller_count <= seller_count."""
+        df = generate_smartwatch_data(n_products=20)
+        
+        for idx, row in df.iterrows():
+            assert row["available_seller_count"] <= row["seller_count"], \
+                f"Row {idx}: available_seller_count > seller_count"
+            assert row["available_seller_count"] >= 1, \
+                f"Row {idx}: available_seller_count should be at least 1"
+    
+    def test_target_margin_in_valid_range(self):
+        """Test that our_target_margin is between 0 and 1."""
+        df = generate_smartwatch_data(n_products=20)
+        
+        for idx, row in df.iterrows():
+            assert 0 <= row["our_target_margin"] <= 1, \
+                f"Row {idx}: our_target_margin out of range (0-1)"
+    
+    def test_strategy_is_valid(self):
+        """Test that our_strategy is one of the defined strategies."""
+        df = generate_smartwatch_data(n_products=20)
+        
+        valid_strategies = [
+            "Trust Builder", "Balanced", "Profit Protection", 
+            "Market Penetration", "Premium Positioning", "Clearance / Cashflow"
+        ]
+        
+        for idx, row in df.iterrows():
+            assert row["our_strategy"] in valid_strategies, \
+                f"Row {idx}: invalid strategy '{row['our_strategy']}'"
+    
+    def test_brand_affects_inventory_realistic(self):
+        """Test that inventory levels are realistic for different brands."""
+        df = generate_smartwatch_data(n_products=30)
+        
+        apple_products = df[df["brand"] == "Apple"]
+        xiaomi_products = df[df["brand"] == "Xiaomi"]
+        
+        # Apple should have lower inventory on average
+        if len(apple_products) > 0 and len(xiaomi_products) > 0:
+            apple_avg_inv = apple_products["our_inventory"].mean()
+            xiaomi_avg_inv = xiaomi_products["our_inventory"].mean()
+            assert apple_avg_inv < xiaomi_avg_inv, \
+                "Apple should have lower average inventory than Xiaomi"
+    
+    def test_phase2_deterministic_generation(self):
+        """Test that same seed produces identical Phase 2 data."""
+        df1 = generate_smartwatch_data(seed=999, n_products=10)
+        df2 = generate_smartwatch_data(seed=999, n_products=10)
+        
+        pd.testing.assert_frame_equal(df1, df2)
+
+
+class TestStrategyBasedPricing:
+    """Test strategy-based pricing for Phase 2."""
+    
+    def test_all_strategies_return_valid_prices(self):
+        """Test that all strategies return positive prices."""
+        from src.pricing.strategies import calculate_strategy_prices
+        
+        phase2_product = {
+            "our_cost_price": 2_000_000.0,
+            "our_target_margin": 0.30,
+            "market_min_price": 2_700_000.0,
+            "market_median_price": 3_000_000.0,
+            "market_max_price": 3_500_000.0,
+            "torob_min_price": 2_650_000.0,
+            "torob_median_price": 2_950_000.0,
+            "digikala_price": 3_050_000.0,
+            "theoretical_toman_price": 2_300_000.0,
+            "our_inventory": 50,
+            "our_sales_7d": 5,
+            "our_sales_30d": 20,
+        }
+        
+        prices = calculate_strategy_prices(phase2_product)
+        
+        for strategy, price in prices.items():
+            assert price > 0, f"{strategy}: price should be positive"
+            assert price >= 1_000_000, f"{strategy}: price seems too low"
+    
+    def test_no_strategy_price_below_minimum_allowed(self):
+        """Test that no strategy price goes below minimum allowed threshold."""
+        from src.pricing.strategies import calculate_strategy_prices, _calculate_minimum_allowed_price
+        
+        phase2_product = {
+            "our_cost_price": 1_000_000.0,
+            "our_target_margin": 0.35,
+            "market_min_price": 1_400_000.0,
+            "market_median_price": 1_600_000.0,
+            "market_max_price": 1_800_000.0,
+            "torob_min_price": 1_380_000.0,
+            "torob_median_price": 1_580_000.0,
+            "digikala_price": 1_620_000.0,
+            "theoretical_toman_price": 1_200_000.0,
+            "our_inventory": 30,
+            "our_sales_7d": 3,
+            "our_sales_30d": 12,
+        }
+        
+        min_allowed = _calculate_minimum_allowed_price(
+            phase2_product["our_cost_price"],
+            phase2_product["our_target_margin"]
+        )
+        
+        prices = calculate_strategy_prices(phase2_product)
+        
+        for strategy, price in prices.items():
+            assert price >= min_allowed, \
+                f"{strategy}: price {price} is below minimum allowed {min_allowed}"
+    
+    def test_theoretical_toman_price_included(self):
+        """Test that theoretical_toman_price is included in recommendation."""
+        phase2_product = {
+            "product_id": "SW_PHASE2_001",
+            "product_name": "Phase 2 Product",
+            "brand": "TestBrand",
+            "model": "TestModel",
+            "category": "Premium",
+            "our_current_price": 3_000_000.0,
+            "our_cost_price": 2_000_000.0,
+            "our_inventory": 20,
+            "our_sales_7d": 2,
+            "our_sales_30d": 8,
+            "our_target_margin": 0.30,
+            "our_strategy": "balanced",
+            "base_usd_price": 200.0,
+            "usd_rate": 45_000.0,
+            "theoretical_toman_price": 9_000_000.0,
+            "market_min_price": 2_700_000.0,
+            "market_median_price": 3_000_000.0,
+            "market_max_price": 3_500_000.0,
+            "torob_min_price": 2_650_000.0,
+            "torob_median_price": 2_950_000.0,
+            "digikala_price": 3_050_000.0,
+        }
+        
+        rec = recommend_price(phase2_product)
+        
+        assert "theoretical_toman_price" in rec
+        assert rec["theoretical_toman_price"] is not None
+        assert rec["theoretical_toman_price"] > 0
+    
+    def test_iran_market_premium_calculated(self):
+        """Test that iran_market_premium_pct is calculated."""
+        phase2_product = {
+            "product_id": "SW_PHASE2_002",
+            "product_name": "Phase 2 Product 2",
+            "brand": "TestBrand",
+            "model": "TestModel",
+            "category": "Mid-Range",
+            "our_current_price": 3_000_000.0,
+            "our_cost_price": 2_000_000.0,
+            "our_inventory": 40,
+            "our_sales_7d": 5,
+            "our_sales_30d": 20,
+            "our_target_margin": 0.25,
+            "our_strategy": "balanced",
+            "base_usd_price": 100.0,
+            "usd_rate": 45_000.0,
+            "theoretical_toman_price": 4_500_000.0,
+            "market_min_price": 5_000_000.0,
+            "market_median_price": 5_500_000.0,
+            "market_max_price": 6_000_000.0,
+            "torob_min_price": 4_900_000.0,
+            "torob_median_price": 5_400_000.0,
+            "digikala_price": 5_600_000.0,
+        }
+        
+        rec = recommend_price(phase2_product)
+        
+        assert "iran_market_premium_pct" in rec
+        assert rec["iran_market_premium_pct"] is not None
+        # Premium should be positive (market price > theoretical)
+        assert rec["iran_market_premium_pct"] > 0
+    
+    def test_selected_strategy_maps_to_recommended_price(self):
+        """Test that selected_strategy_price matches recommended_price."""
+        phase2_product = {
+            "product_id": "SW_PHASE2_003",
+            "product_name": "Phase 2 Product 3",
+            "brand": "TestBrand",
+            "model": "TestModel",
+            "category": "Budget",
+            "our_current_price": 1_500_000.0,
+            "our_cost_price": 800_000.0,
+            "our_inventory": 80,
+            "our_sales_7d": 10,
+            "our_sales_30d": 40,
+            "our_target_margin": 0.22,
+            "our_strategy": "market_penetration",
+            "base_usd_price": 50.0,
+            "usd_rate": 45_000.0,
+            "theoretical_toman_price": 2_250_000.0,
+            "market_min_price": 1_300_000.0,
+            "market_median_price": 1_500_000.0,
+            "market_max_price": 1_700_000.0,
+            "torob_min_price": 1_280_000.0,
+            "torob_median_price": 1_480_000.0,
+            "digikala_price": 1_520_000.0,
+        }
+        
+        rec = recommend_price(phase2_product)
+        
+        assert "selected_strategy_price" in rec
+        assert rec["selected_strategy_price"] == rec["recommended_price"]
+    
+    def test_unknown_strategy_falls_back_to_balanced(self):
+        """Test that unknown strategy falls back to balanced."""
+        from src.pricing.strategies import select_strategy_price
+        
+        phase2_product = {
+            "our_cost_price": 1_000_000.0,
+            "our_target_margin": 0.30,
+            "market_min_price": 1_400_000.0,
+            "market_median_price": 1_600_000.0,
+            "market_max_price": 1_800_000.0,
+            "torob_min_price": 1_380_000.0,
+            "torob_median_price": 1_580_000.0,
+            "digikala_price": 1_620_000.0,
+            "theoretical_toman_price": 1_200_000.0,
+            "our_inventory": 30,
+            "our_sales_7d": 3,
+            "our_sales_30d": 12,
+        }
+        
+        result = select_strategy_price(phase2_product, strategy="unknown_strategy")
+        
+        # Should fallback to balanced
+        assert result["strategy"] == "balanced"
+    
+    def test_strategy_prices_dict_contains_all_strategies(self):
+        """Test that strategy_prices dict includes all valid strategies."""
+        phase2_product = {
+            "product_id": "SW_PHASE2_004",
+            "product_name": "Phase 2 Product 4",
+            "brand": "TestBrand",
+            "model": "TestModel",
+            "category": "Premium",
+            "our_current_price": 5_000_000.0,
+            "our_cost_price": 3_000_000.0,
+            "our_inventory": 15,
+            "our_sales_7d": 2,
+            "our_sales_30d": 8,
+            "our_target_margin": 0.35,
+            "our_strategy": "premium_positioning",
+            "base_usd_price": 300.0,
+            "usd_rate": 45_000.0,
+            "theoretical_toman_price": 13_500_000.0,
+            "market_min_price": 15_000_000.0,
+            "market_median_price": 16_000_000.0,
+            "market_max_price": 17_000_000.0,
+            "torob_min_price": 14_800_000.0,
+            "torob_median_price": 15_800_000.0,
+            "digikala_price": 16_200_000.0,
+        }
+        
+        rec = recommend_price(phase2_product)
+        
+        assert "strategy_prices" in rec
+        expected_strategies = {
+            "trust_builder",
+            "balanced",
+            "profit_protection",
+            "market_penetration",
+            "premium_positioning",
+            "clearance_cashflow",
+        }
+        for strategy in expected_strategies:
+            assert strategy in rec["strategy_prices"], f"Missing strategy: {strategy}"
+            assert rec["strategy_prices"][strategy] > 0, f"{strategy} price should be positive"
+    
+    def test_trust_builder_close_to_market_min(self):
+        """Test that trust_builder strategy prices near market minimum."""
+        from src.pricing.strategies import calculate_strategy_prices
+        
+        phase2_product = {
+            "our_cost_price": 1_000_000.0,
+            "our_target_margin": 0.25,
+            "market_min_price": 1_400_000.0,
+            "market_median_price": 1_600_000.0,
+            "market_max_price": 1_800_000.0,
+            "torob_min_price": 1_380_000.0,
+            "torob_median_price": 1_580_000.0,
+            "digikala_price": 1_620_000.0,
+            "theoretical_toman_price": 1_200_000.0,
+            "our_inventory": 60,
+            "our_sales_7d": 4,
+            "our_sales_30d": 16,
+        }
+        
+        prices = calculate_strategy_prices(phase2_product)
+        
+        # Trust builder should be lowest (or tied with market penetration)
+        trust_builder = prices["trust_builder"]
+        balanced = prices["balanced"]
+        profit_protection = prices["profit_protection"]
+        
+        # Trust builder should be below or equal to balanced
+        assert trust_builder <= balanced, "trust_builder should be <= balanced"
+        # Trust builder should be below profit_protection
+        assert trust_builder < profit_protection, "trust_builder should be < profit_protection"
+    
+    def test_premium_positioning_above_market_median(self):
+        """Test that premium_positioning strategy prices above market median."""
+        from src.pricing.strategies import calculate_strategy_prices
+        
+        phase2_product = {
+            "our_cost_price": 1_000_000.0,
+            "our_target_margin": 0.35,
+            "market_min_price": 1_400_000.0,
+            "market_median_price": 1_600_000.0,
+            "market_max_price": 1_800_000.0,
+            "torob_min_price": 1_380_000.0,
+            "torob_median_price": 1_580_000.0,
+            "digikala_price": 1_620_000.0,
+            "theoretical_toman_price": 1_200_000.0,
+            "our_inventory": 10,
+            "our_sales_7d": 1,
+            "our_sales_30d": 4,
+        }
+        
+        prices = calculate_strategy_prices(phase2_product)
+        
+        premium = prices["premium_positioning"]
+        market_median = phase2_product["market_median_price"]
+        market_max = phase2_product["market_max_price"]
+        
+        # Premium positioning should be above median
+        assert premium > market_median * 1.05, "premium_positioning should be > median * 1.05"
+        # But should not exceed market max significantly
+        assert premium <= market_max * 1.10, "premium_positioning should not exceed market_max * 1.10"
+    
+    def test_clearance_discounted_with_high_inventory(self):
+        """Test that clearance strategy applies discounts with high inventory."""
+        from src.pricing.strategies import calculate_strategy_prices
+        
+        high_inventory = {
+            "our_cost_price": 1_000_000.0,
+            "our_target_margin": 0.25,
+            "market_min_price": 1_400_000.0,
+            "market_median_price": 1_600_000.0,
+            "market_max_price": 1_800_000.0,
+            "torob_min_price": 1_380_000.0,
+            "torob_median_price": 1_580_000.0,
+            "digikala_price": 1_620_000.0,
+            "theoretical_toman_price": 1_200_000.0,
+            "our_inventory": 150,  # High inventory
+            "our_sales_7d": 2,  # Weak sales
+            "our_sales_30d": 8,
+        }
+        
+        low_inventory = {
+            **high_inventory,
+            "our_inventory": 10,  # Low inventory
+            "our_sales_7d": 5,  # Decent sales
+        }
+        
+        prices_high = calculate_strategy_prices(high_inventory)
+        prices_low = calculate_strategy_prices(low_inventory)
+        
+        # Clearance with high inventory should be lower than with low inventory
+        assert prices_high["clearance_cashflow"] < prices_low["clearance_cashflow"], \
+            "clearance_cashflow should be lower with high inventory"
 
 
 if __name__ == "__main__":

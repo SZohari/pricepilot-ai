@@ -46,6 +46,13 @@ def main():
         return False
     
     try:
+        from src.pricing.strategies import calculate_strategy_prices
+        print("   ✓ src.pricing.strategies")
+    except Exception as e:
+        print(f"   ✗ src.pricing.strategies: {e}")
+        return False
+    
+    try:
         import streamlit
         print("   ✓ streamlit")
     except Exception as e:
@@ -57,8 +64,15 @@ def main():
     # Test 2: Load sample data
     print("2. Loading sample data...")
     try:
-        df = load_sample_data()
-        print(f"   ✓ Loaded {len(df)} products")
+        from src.data.sample_data_generator import generate_smartwatch_data
+        # Try to load Phase 2 data
+        try:
+            df = generate_smartwatch_data(seed=42, n_products=30)
+            print(f"   ✓ Loaded {len(df)} Phase 2 products")
+        except:
+            # Fallback to MVP data
+            df = load_sample_data()
+            print(f"   ✓ Loaded {len(df)} MVP products (Phase 2 generation unavailable)")
     except Exception as e:
         print(f"   ✗ Failed to load data: {e}")
         return False
@@ -75,6 +89,38 @@ def main():
         print(f"   ✓ Risk: {rec['risk_level']}")
     except Exception as e:
         print(f"   ✗ Failed to generate recommendation: {e}")
+        return False
+    
+    print()
+    
+    # Test 3b: Verify Phase 2 strategy pricing (if Phase 2 data)
+    print("3b. Verifying strategy-based pricing...")
+    try:
+        if "our_strategy" in df.columns:
+            from src.pricing.strategies import calculate_strategy_prices
+            product = df.iloc[0].to_dict()
+            strategy_prices = calculate_strategy_prices(product)
+            print(f"   ✓ Strategy prices calculated ({len(strategy_prices)} strategies)")
+            
+            # Verify contract
+            rec = recommend_price(product)
+            if rec.get('recommended_price') == rec.get('selected_strategy_price'):
+                print(f"   ✓ recommended_price matches selected_strategy_price")
+            else:
+                print(f"   ✗ Price mismatch")
+                return False
+                
+            if rec.get('strategy_prices'):
+                print(f"   ✓ strategy_prices present in recommendation")
+            else:
+                print(f"   ✗ strategy_prices missing")
+                return False
+        else:
+            print("   - Phase 2 data not detected (MVP data used)")
+    except Exception as e:
+        print(f"   ✗ Strategy verification failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
     
     print()

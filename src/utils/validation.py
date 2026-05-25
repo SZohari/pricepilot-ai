@@ -4,50 +4,58 @@ import pandas as pd
 from typing import Tuple, List
 
 
+
+# Phase 2 required columns (see docs/PHASE_2_DESIGN.md)
 REQUIRED_COLUMNS = {
     "product_id": str,
     "product_name": str,
     "brand": str,
     "model": str,
     "category": str,
-    "current_price": float,
-    "cost_price": float,
-    "inventory": int,
-    "competitor_min_price": float,
-    "competitor_median_price": float,
-    "competitor_max_price": float,
+    "base_usd_price": float,
+    "base_usd_price_source": str,
     "usd_rate": float,
-    "usd_change_7d": float,
-    "sales_7d": int,
-    "sales_30d": int,
-    "views_30d": int,
-    "conversion_rate": float,
-    "target_margin": float,
-    "supplier_lead_time_days": int,
+    "theoretical_toman_price": float,
+    "market_min_price": float,
+    "market_median_price": float,
+    "market_max_price": float,
+    "market_avg_price": float,
+    "seller_count": int,
+    "available_seller_count": int,
+    "torob_min_price": float,
+    "torob_median_price": float,
+    "digikala_price": float,
+    "our_current_price": float,
+    "our_cost_price": float,
+    "our_inventory": int,
+    "our_sales_7d": int,
+    "our_sales_30d": int,
+    "our_target_margin": float,
+    "our_strategy": str,
+    "observed_at": str,
+}
+
+# Optional/deprecated columns for compatibility (not required for new logic)
+OPTIONAL_COLUMNS = {
+    "views_30d": int,  # Deprecated
+    "conversion_rate": float,  # Deprecated
+    "usd_change_7d": float,  # Optional, not always available
+    "supplier_lead_time_days": int,  # Optional, not always available
 }
 
 
 def validate_csv_columns(df: pd.DataFrame) -> Tuple[bool, List[str]]:
     """
-    Validate that a DataFrame has all required columns.
-    
+    Validate that a DataFrame has all required columns (Phase 2 schema).
     Args:
         df: DataFrame to validate
-        
     Returns:
         Tuple of (is_valid, list_of_missing_columns)
-        
-    Examples:
-        is_valid, missing = validate_csv_columns(df)
-        if not is_valid:
-            print(f"Missing columns: {missing}")
     """
     missing_columns = []
-    
     for col in REQUIRED_COLUMNS.keys():
         if col not in df.columns:
             missing_columns.append(col)
-    
     return len(missing_columns) == 0, missing_columns
 
 
@@ -68,28 +76,32 @@ def validate_csv_data(df: pd.DataFrame) -> Tuple[bool, List[str]]:
         issues.append("CSV file is empty")
         return False, issues
     
-    # Check for negative prices
-    price_cols = ["current_price", "cost_price", "competitor_min_price", 
-                  "competitor_median_price", "competitor_max_price"]
+    # Check for negative prices (Phase 2 schema)
+    price_cols = [
+        "base_usd_price", "theoretical_toman_price",
+        "market_min_price", "market_median_price", "market_max_price", "market_avg_price",
+        "torob_min_price", "torob_median_price", "digikala_price",
+        "our_current_price", "our_cost_price",
+    ]
     for col in price_cols:
         if col in df.columns:
             if (df[col] < 0).any():
                 issues.append(f"Column '{col}' contains negative values")
     
     # Check for negative inventory
-    if "inventory" in df.columns:
-        if (df["inventory"] < 0).any():
-            issues.append("Column 'inventory' contains negative values")
+    if "our_inventory" in df.columns:
+        if (df["our_inventory"] < 0).any():
+            issues.append("Column 'our_inventory' contains negative values")
     
-    # Check conversion rate is between 0 and 1
+    # Check conversion rate is between 0 and 1 (optional/deprecated field)
     if "conversion_rate" in df.columns:
         if ((df["conversion_rate"] < 0) | (df["conversion_rate"] > 1)).any():
             issues.append("Column 'conversion_rate' should be between 0 and 1")
     
     # Check target_margin is between 0 and 1
-    if "target_margin" in df.columns:
-        if ((df["target_margin"] < 0) | (df["target_margin"] > 1)).any():
-            issues.append("Column 'target_margin' should be between 0 and 1")
+    if "our_target_margin" in df.columns:
+        if ((df["our_target_margin"] < 0) | (df["our_target_margin"] > 1)).any():
+            issues.append("Column 'our_target_margin' should be between 0 and 1")
     
     return len(issues) == 0, issues
 
@@ -130,17 +142,19 @@ def load_and_validate_csv(file_path: str) -> Tuple[bool, pd.DataFrame, List[str]
 
 def get_column_info() -> str:
     """
-    Get human-readable information about required columns.
-    
+    Get human-readable information about required and optional columns.
     Returns:
-        Formatted string describing all required columns
+        Formatted string describing all required and optional columns
     """
     lines = []
     lines.append("Required CSV Columns:")
     lines.append("")
-    
     for col, dtype in REQUIRED_COLUMNS.items():
         type_name = dtype.__name__
         lines.append(f"- {col} ({type_name})")
-    
+    lines.append("")
+    lines.append("Optional/Deprecated Columns:")
+    for col, dtype in OPTIONAL_COLUMNS.items():
+        type_name = dtype.__name__
+        lines.append(f"- {col} ({type_name})")
     return "\n".join(lines)
