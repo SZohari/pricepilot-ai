@@ -244,32 +244,32 @@ def main():
             # Action distribution
             action_counts = filtered_recs["action"].value_counts()
             fig_actions = px.pie(
-                x=action_counts.values,
-                labels=action_counts.index,
-                title="📈 Price Actions Distribution",
-                color_discrete_map={
-                    "increase_price": "#90EE90",
-                    "decrease_price": "#FFB6C1",
-                    "hold_price": "#FFFFCC",
-                    "urgent_review": "#FF6347",
-                },
-            )
+    values=action_counts.values,
+    names=action_counts.index,
+    title="📈 Price Actions Distribution",
+    color_discrete_map={
+        "increase_price": "#90EE90",
+        "decrease_price": "#FFB6C1",
+        "hold_price": "#FFFFCC",
+        "urgent_review": "#FF6347",
+    },
+)
             st.plotly_chart(fig_actions, use_container_width=True)
         
         with col2:
             # Risk distribution
             risk_counts = filtered_recs["risk_level"].value_counts()
             fig_risk = px.pie(
-                x=risk_counts.values,
-                labels=risk_counts.index,
-                title="⚠️ Risk Level Distribution",
-                color_discrete_map={
-                    "low": "#00CC00",
-                    "medium": "#FFAA00",
-                    "high": "#FF6600",
-                    "critical": "#CC0000",
-                },
-            )
+    values=risk_counts.values,
+    names=risk_counts.index,
+    title="⚠️ Risk Level Distribution",
+    color_discrete_map={
+        "low": "#00CC00",
+        "medium": "#FFAA00",
+        "high": "#FF6600",
+        "critical": "#CC0000",
+    },
+)
             st.plotly_chart(fig_risk, use_container_width=True)
         
         # Margin analysis
