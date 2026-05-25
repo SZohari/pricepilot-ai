@@ -2,6 +2,10 @@
 
 A lightweight MVP dashboard for pricing smartwatches in volatile retail markets (Iran).
 
+## Phase 2 Design
+
+See [docs/PHASE_2_DESIGN.md](docs/PHASE_2_DESIGN.md) for the next version design and project direction.
+
 ## Features
 
 - **Rule-based pricing recommendations** with explainable logic
