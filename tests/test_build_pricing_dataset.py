@@ -319,3 +319,90 @@ class TestEndToEnd:
         # Verify saved data matches result
         assert len(loaded) == len(result)
         assert set(loaded.columns) == set(result.columns)
+
+
+class TestTemplateAlignment:
+    """Tests for template data alignment and quality."""
+    
+    def test_market_observations_csv_column_count(self):
+        """Every row in market_observations_template.csv has 14 columns."""
+        df = pd.read_csv('data/raw/market_observations_template.csv')
+        assert len(df.columns) == 14, f"Expected 14 columns, got {len(df.columns)}"
+        
+        # Verify no NaN in critical columns
+        assert not df['product_id'].isna().any()
+        assert not df['product_query'].isna().any()
+        assert not df['normalized_product_name'].isna().any()
+        assert not df['listed_price'].isna().any()
+    
+    def test_market_observations_prices_are_numeric(self):
+        """All prices in market_observations_template.csv can be parsed as numeric."""
+        df = pd.read_csv('data/raw/market_observations_template.csv')
+        prices = pd.to_numeric(df['listed_price'], errors='coerce')
+        assert not prices.isna().any(), "Some prices cannot be parsed as numeric"
+    
+    def test_all_templates_share_product_ids(self):
+        """All three raw templates contain the same 5 product_ids."""
+        market = pd.read_csv('data/raw/market_observations_template.csv')
+        retailer = pd.read_csv('data/raw/retailer_internal_demo_template.csv')
+        usd = pd.read_csv('data/raw/global_usd_reference_template.csv')
+        
+        market_ids = set(market['product_id'].unique())
+        retailer_ids = set(retailer['product_id'].unique())
+        usd_ids = set(usd['product_id'].unique())
+        
+        # Should all be the same
+        assert market_ids == retailer_ids, f"Market {market_ids} != Retailer {retailer_ids}"
+        assert retailer_ids == usd_ids, f"Retailer {retailer_ids} != USD {usd_ids}"
+        
+        # Should have exactly 5 products
+        assert len(market_ids) == 5, f"Expected 5 products, got {len(market_ids)}"
+    
+    def test_each_product_has_minimum_observations(self):
+        """Each product_id in market_observations has at least 3 observations."""
+        df = pd.read_csv('data/raw/market_observations_template.csv')
+        
+        for product_id in df['product_id'].unique():
+            count = len(df[df['product_id'] == product_id])
+            assert count >= 3, f"{product_id} has only {count} observations, need at least 3"
+    
+    def test_build_pipeline_outputs_five_products(self):
+        """Build pipeline processes all 5 products from templates."""
+        market = load_market_observations('data/raw/market_observations_template.csv')
+        retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+        usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        
+        result = build_dashboard_pricing_dataset(market, retailer, usd)
+        
+        assert len(result) == 5, f"Expected 5 products in output, got {len(result)}"
+        
+        # Verify all expected products are present
+        expected_ids = sorted(['APUL-GPS-1', 'GAML-SE-1', 'FITB-CHG-1', 'HWAT-GTA-1', 'XIAO-MI-1'])
+        actual_ids = sorted(result['product_id'].unique())
+        assert actual_ids == expected_ids, f"Expected {expected_ids}, got {actual_ids}"
+    
+    def test_output_products_have_all_data(self):
+        """Every output product has market, retailer, and USD reference fields."""
+        market = load_market_observations('data/raw/market_observations_template.csv')
+        retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+        usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        
+        result = build_dashboard_pricing_dataset(market, retailer, usd)
+        
+        # Check market fields
+        market_fields = ['market_min_price', 'market_median_price', 'market_max_price', 'seller_count']
+        for field in market_fields:
+            assert field in result.columns, f"Missing market field: {field}"
+            assert not result[field].isna().any(), f"Market field {field} has null values"
+        
+        # Check retailer fields
+        retailer_fields = ['our_current_price', 'our_cost_price', 'our_inventory', 'our_strategy']
+        for field in retailer_fields:
+            assert field in result.columns, f"Missing retailer field: {field}"
+            assert not result[field].isna().any(), f"Retailer field {field} has null values"
+        
+        # Check USD fields
+        usd_fields = ['base_usd_price', 'usd_rate', 'theoretical_toman_price']
+        for field in usd_fields:
+            assert field in result.columns, f"Missing USD field: {field}"
+            assert not result[field].isna().any(), f"USD field {field} has null values"
