@@ -44,6 +44,24 @@ streamlit run src/dashboard/app.py
 
 The dashboard will open at `http://localhost:8501`
 
+## Building Dashboard Data from Raw Market Inputs
+
+To convert raw market observations into dashboard-ready pricing data:
+
+```powershell
+python scripts/build_pricing_dataset.py
+```
+
+This pipeline:
+1. Loads market observations from `data/raw/market_observations_template.csv`
+2. Loads retailer internal data from `data/raw/retailer_internal_demo_template.csv`
+3. Loads USD reference prices from `data/raw/global_usd_reference_template.csv`
+4. Aggregates market data by product
+5. Calculates `theoretical_toman_price` and `iran_market_premium_pct`
+6. Outputs to `data/processed/dashboard_pricing_data.csv`
+
+The output is ready for the dashboard or further analysis.
+
 ## Project Structure
 
 ```

@@ -255,7 +255,9 @@ def validate_market_observations(df: pd.DataFrame) -> tuple[bool, List[str]]:
     # Check for negative prices
     price_col = df.get('listed_price')
     if price_col is not None:
-        negative_prices = (price_col < 0).sum()
+        # Convert to numeric, coercing errors to NaN
+        numeric_prices = pd.to_numeric(price_col, errors='coerce')
+        negative_prices = (numeric_prices < 0).sum()
         if negative_prices > 0:
             issues.append(f"Found {negative_prices} negative prices")
     
