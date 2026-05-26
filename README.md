@@ -62,6 +62,35 @@ This pipeline:
 
 The output is ready for the dashboard or further analysis.
 
+## Working with Real Market Data
+
+The dashboard supports three data source modes:
+
+### Option 1: Use Processed Real Market Dataset
+
+```powershell
+# 1. Edit raw market data files
+# - data/raw/market_observations_template.csv
+# - data/raw/retailer_internal_demo_template.csv
+# - data/raw/global_usd_reference_template.csv
+
+# 2. Build the processed dataset
+python scripts/build_pricing_dataset.py
+
+# 3. Run the dashboard
+streamlit run src/dashboard/app.py
+
+# 4. In the sidebar, select: "Processed Real Market Dataset"
+```
+
+### Option 2: Upload CSV File
+
+In the Streamlit sidebar, select "Upload CSV" and upload your own pricing data file.
+
+### Option 3: Use Sample Data
+
+In the Streamlit sidebar, select "Sample Data (Generated)" for demo/testing purposes.
+
 ## Project Structure
 
 ```

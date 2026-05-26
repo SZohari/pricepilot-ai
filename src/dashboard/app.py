@@ -12,6 +12,7 @@ import io
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.sample_data_generator import load_sample_data
+from src.data.build_pricing_dataset import load_processed_pricing_data
 from src.pricing.recommendation import recommend_price
 from src.utils.formatting import (
     format_toman,
@@ -27,14 +28,38 @@ from src.utils.validation import validate_csv_columns, validate_csv_data, get_co
 
 
 def load_data_with_mode():
-    """Load data from sample or uploaded CSV."""
+    """Load data from sample, processed real data, or uploaded CSV."""
     data_mode = st.sidebar.radio(
         "📂 Data Source",
-        options=["Sample Data (Generated)", "Upload CSV"],
-        help="Choose between generated sample data or upload your own CSV",
+        options=[
+            "Sample Data (Generated)",
+            "Processed Real Market Dataset",
+            "Upload CSV"
+        ],
+        help="Choose between generated sample data, real market data, or upload your own CSV",
     )
     
-    if data_mode == "Upload CSV":
+    if data_mode == "Processed Real Market Dataset":
+        st.sidebar.markdown("**Real Market Data**")
+        try:
+            df = load_processed_pricing_data()
+            st.sidebar.success(f"✅ Loaded {len(df)} products from processed dataset")
+            return df
+        except FileNotFoundError as e:
+            st.sidebar.warning(str(e))
+            st.info(
+                "📝 **To use real market data:**\n"
+                "1. Edit files in `data/raw/`\n"
+                "2. Run: `python scripts/build_pricing_dataset.py`\n"
+                "3. Refresh this page"
+            )
+            return None
+        except ValueError as e:
+            st.sidebar.error(str(e))
+            st.error(f"❌ Dataset validation failed: {str(e)}")
+            return None
+    
+    elif data_mode == "Upload CSV":
         st.sidebar.markdown("**Upload Real Data**")
         uploaded_file = st.sidebar.file_uploader(
             "Choose CSV file",
@@ -70,6 +95,7 @@ def load_data_with_mode():
             return None
     
     else:
+        # Sample Data (Generated)
         return load_sample_data()
 
 

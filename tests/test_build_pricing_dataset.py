@@ -406,3 +406,74 @@ class TestTemplateAlignment:
         for field in usd_fields:
             assert field in result.columns, f"Missing USD field: {field}"
             assert not result[field].isna().any(), f"USD field {field} has null values"
+
+
+class TestLoadProcessedPricingData:
+    """Tests for loading processed dashboard-ready pricing data."""
+    
+    def test_load_processed_data_missing_file(self):
+        """Loading processed data with missing file raises FileNotFoundError."""
+        from src.data.build_pricing_dataset import load_processed_pricing_data
+        
+        with pytest.raises(FileNotFoundError):
+            load_processed_pricing_data('data/processed/nonexistent.csv')
+    
+    def test_load_processed_data_existing_file(self):
+        """Loading processed data from existing file succeeds."""
+        from src.data.build_pricing_dataset import load_processed_pricing_data
+        
+        # Build the processed dataset if it doesn't exist
+        if not Path('data/processed/dashboard_pricing_data.csv').exists():
+            market = load_market_observations('data/raw/market_observations_template.csv')
+            retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+            usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+            result = build_dashboard_pricing_dataset(market, retailer, usd)
+            save_dashboard_pricing_dataset(result)
+        
+        # Now load it
+        df = load_processed_pricing_data()
+        assert df is not None
+        assert len(df) > 0
+        assert 'product_id' in df.columns
+    
+    def test_load_processed_data_has_five_products(self):
+        """Loaded processed data contains exactly 5 products."""
+        from src.data.build_pricing_dataset import load_processed_pricing_data
+        
+        # Build the processed dataset if needed
+        if not Path('data/processed/dashboard_pricing_data.csv').exists():
+            market = load_market_observations('data/raw/market_observations_template.csv')
+            retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+            usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+            result = build_dashboard_pricing_dataset(market, retailer, usd)
+            save_dashboard_pricing_dataset(result)
+        
+        df = load_processed_pricing_data()
+        assert len(df) == 5, f"Expected 5 products, got {len(df)}"
+    
+    def test_load_processed_data_has_required_fields(self):
+        """Loaded processed data has all required Phase 2 fields."""
+        from src.data.build_pricing_dataset import load_processed_pricing_data
+        
+        # Build the processed dataset if needed
+        if not Path('data/processed/dashboard_pricing_data.csv').exists():
+            market = load_market_observations('data/raw/market_observations_template.csv')
+            retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+            usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+            result = build_dashboard_pricing_dataset(market, retailer, usd)
+            save_dashboard_pricing_dataset(result)
+        
+        df = load_processed_pricing_data()
+        required_fields = [
+            'product_id',
+            'product_name',
+            'market_median_price',
+            'our_current_price',
+            'our_cost_price',
+            'our_target_margin',
+            'our_strategy',
+        ]
+        
+        for field in required_fields:
+            assert field in df.columns, f"Missing required field: {field}"
+            assert not df[field].isna().any(), f"Required field {field} has null values"
