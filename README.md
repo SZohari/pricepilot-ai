@@ -91,6 +91,56 @@ In the Streamlit sidebar, select "Upload CSV" and upload your own pricing data f
 
 In the Streamlit sidebar, select "Sample Data (Generated)" for demo/testing purposes.
 
+## User-Friendly Market Update Workflow
+
+Instead of manually editing CSV files, use the dashboard's **Market Update** console for quick, assisted updates:
+
+### Quick Daily Update (Recommended)
+
+```powershell
+# 1. Run the dashboard
+streamlit run src/dashboard/app.py
+
+# 2. Go to the "📝 Market Update" tab
+
+# 3. Select a product from the dropdown
+#    - Clickable source links (Torob, Digikala, Global Ref)
+#    - Quick price entry (min, median, max)
+#    - Availability status
+#    - Save with one click
+
+# 4. Enter FX rate (USDIRT or similar)
+#    - Source selector (manual, Nobitex, Navasan, etc.)
+#    - Rate input
+#    - Save FX snapshot
+
+# 5. Build processed dataset
+#    - Click "Run Build Pipeline" in the dashboard
+#    - Or manually: python scripts/build_pricing_dataset.py
+
+# 6. Dashboard automatically loads the updated data
+#    - Select "Processed Real Market Dataset" mode
+#    - See 5 products with latest market prices
+```
+
+### What Gets Stored
+
+- **products_master.csv**: Product catalog (10+ smartwatches) with URLs and priority
+- **daily_market_updates.csv**: Daily price snapshots (Torob, Digikala, Market Max)
+- **fx_rate_snapshots.csv**: Historical FX rates for USD/USDT/IRR conversions
+- **market_observations_template.csv**: Aggregated market observations
+- **retailer_internal_demo_template.csv**: Your pricing data
+- **global_usd_reference_template.csv**: Global base prices
+
+### Workflow Benefits
+
+✅ No manual CSV editing needed  
+✅ Source links open directly in browser  
+✅ Quick price validation  
+✅ FX rate history preserved  
+✅ One-click build to update dashboard  
+✅ Future-ready for API integration (Nobitex, Navasan, etc.)  
+
 ## Project Structure
 
 ```

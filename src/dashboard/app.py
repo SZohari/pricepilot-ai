@@ -13,6 +13,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.sample_data_generator import load_sample_data
 from src.data.build_pricing_dataset import load_processed_pricing_data
+from src.data.manual_entry import (
+    load_products_master,
+    load_daily_market_updates,
+    load_fx_rate_snapshots,
+    append_daily_market_update,
+    append_fx_rate_snapshot,
+    get_latest_update_for_product,
+    get_products_missing_update_today,
+    validate_daily_market_update,
+    validate_fx_rate_snapshot,
+)
+from src.data.build_pricing_dataset import build_dashboard_pricing_dataset, load_market_observations, load_retailer_internal_data, load_global_usd_reference
 from src.pricing.recommendation import recommend_price
 from src.utils.formatting import (
     format_toman,
@@ -226,8 +238,8 @@ def main():
     filtered_recs = filtered_recs.reset_index(drop=True)
     
     # Main content area
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["📋 Recommendations", "📊 Analytics", "⚡ USD Shock", "🔍 Details"]
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["📋 Recommendations", "📊 Analytics", "⚡ USD Shock", "🔍 Details", "📝 Market Update"]
     )
     
     # Tab 1: Recommendations Table
@@ -820,6 +832,196 @@ def main():
             
             st.markdown("**Full Explanation:**")
             st.markdown(product_rec.get("explanation", "N/A"))
+    
+    # Tab 5: Market Update Console
+    with tab5:
+        st.subheader("📝 Market Update Console")
+        st.markdown("Manually update market prices and exchange rates.")
+        
+        # Try to load products master
+        try:
+            products_df = load_products_master()
+            updates_df = load_daily_market_updates()
+        except FileNotFoundError:
+            st.error("❌ Products master or updates file not found. Please ensure data/raw/ files exist.")
+            st.stop()
+        
+        # Section 1: Today's Update Status
+        st.markdown("### 📊 Today's Update Status")
+        
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            active_count = len(products_df[products_df.get('active', True) == True])
+            st.metric("📦 Active Products", active_count)
+        
+        with col2:
+            if not updates_df.empty:
+                updates_df['date'] = pd.to_datetime(updates_df['observed_at']).dt.strftime('%Y-%m-%d')
+                updated_today = len(updates_df[updates_df['date'] == today]['product_id'].unique())
+            else:
+                updated_today = 0
+            st.metric("✅ Updated Today", updated_today)
+        
+        with col3:
+            missing_count = active_count - updated_today
+            st.metric("⏳ Missing Today", missing_count)
+        
+        with col4:
+            missing_products = get_products_missing_update_today(products_df, updates_df, today)
+            high_priority = len(missing_products[missing_products.get('priority', 'medium') == 'high'])
+            st.metric("🔴 High-Priority Missing", high_priority)
+        
+        st.markdown("---")
+        
+        # Section 2: Quick Product Update
+        st.markdown("### 💡 Quick Product Update")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            product_options = {f"{row['product_id']} - {row['product_name']}": row['product_id'] 
+                             for _, row in products_df.iterrows()}
+            selected_product = st.selectbox(
+                "Select Product",
+                options=list(product_options.keys()),
+                key="product_select"
+            )
+            selected_product_id = product_options[selected_product]
+        
+        # Show product details
+        product_row = products_df[products_df['product_id'] == selected_product_id].iloc[0]
+        
+        st.markdown(f"**Product:** {product_row['brand']} {product_row['model']}")
+        st.markdown(f"**Priority:** {product_row.get('priority', 'unknown')}")
+        
+        # Show source links
+        sources_cols = st.columns(3)
+        if product_row.get('torob_url'):
+            with sources_cols[0]:
+                st.markdown(f"[🔗 Torob]({product_row['torob_url']})")
+        if product_row.get('digikala_url'):
+            with sources_cols[1]:
+                st.markdown(f"[🔗 Digikala]({product_row['digikala_url']})")
+        if product_row.get('global_reference_url'):
+            with sources_cols[2]:
+                st.markdown(f"[🔗 Global Ref]({product_row['global_reference_url']})")
+        
+        st.markdown("---")
+        
+        # Price input fields
+        st.markdown("**Enter Market Prices (at least one required):**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            torob_min = st.number_input("Torob Min Price (تومان)", min_value=0, value=0, step=100000, key="torob_min")
+            torob_median = st.number_input("Torob Median Price (تومان)", min_value=0, value=0, step=100000, key="torob_median")
+        
+        with col2:
+            digikala_price = st.number_input("Digikala Price (تومان)", min_value=0, value=0, step=100000, key="digikala")
+            market_max = st.number_input("Market Max Price (تومان)", min_value=0, value=0, step=100000, key="market_max")
+        
+        availability = st.selectbox(
+            "Availability Status",
+            options=["available", "low_stock", "unavailable"],
+            key="availability"
+        )
+        
+        notes = st.text_area("Notes", placeholder="e.g., price checked at 14:30", key="market_notes")
+        
+        # Save button
+        if st.button("💾 Save Market Update", key="save_market"):
+            update_dict = {
+                'product_id': selected_product_id,
+                'observed_at': datetime.now().isoformat(),
+                'torob_min_price': torob_min if torob_min > 0 else None,
+                'torob_median_price': torob_median if torob_median > 0 else None,
+                'digikala_price': digikala_price if digikala_price > 0 else None,
+                'market_max_price': market_max if market_max > 0 else None,
+                'availability_note': availability,
+                'notes': notes,
+            }
+            
+            try:
+                append_daily_market_update('data/raw/daily_market_updates.csv', update_dict)
+                st.success(f"✅ Market update saved for {product_row['product_name']}!")
+                st.rerun()
+            except ValueError as e:
+                st.error(f"❌ Validation error: {str(e)}")
+        
+        st.markdown("---")
+        
+        # Section 3: FX Rate Update
+        st.markdown("### 💱 FX Rate Update")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            fx_source = st.selectbox(
+                "FX Source",
+                options=["manual", "nobitex_usdt_proxy", "navasan", "tgju", "bonbast"],
+                help="Future versions will support API integration",
+                key="fx_source"
+            )
+        
+        with col2:
+            fx_symbol = st.text_input("Symbol", value="USDIRT", key="fx_symbol")
+        
+        fx_rate = st.number_input("Rate (Toman per Unit)", min_value=1.0, value=45000.0, step=100.0, key="fx_rate")
+        fx_notes = st.text_area("Notes (e.g., source URL, timestamp)", placeholder="e.g., from Nobitex at 14:30", key="fx_notes")
+        
+        if st.button("💾 Save FX Rate", key="save_fx"):
+            fx_dict = {
+                'source': fx_source,
+                'symbol': fx_symbol,
+                'rate_toman': fx_rate,
+                'observed_at': datetime.now().isoformat(),
+                'notes': fx_notes,
+            }
+            
+            try:
+                append_fx_rate_snapshot('data/raw/fx_rate_snapshots.csv', fx_dict)
+                st.success(f"✅ FX rate saved: {fx_symbol} = {fx_rate:,.0f} Toman")
+                st.rerun()
+            except ValueError as e:
+                st.error(f"❌ Validation error: {str(e)}")
+        
+        st.markdown("---")
+        
+        # Section 4: Build Dataset
+        st.markdown("### 🔨 Build Processing Dataset")
+        st.markdown(
+            "After updating market prices and FX rates, rebuild the processed dataset "
+            "so the dashboard can use the new data."
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.code("python scripts/build_pricing_dataset.py", language="bash")
+        
+        with col2:
+            if st.button("🚀 Run Build Pipeline", key="run_build"):
+                try:
+                    st.info("Building processed dataset...")
+                    
+                    # Load raw data
+                    market = load_market_observations('data/raw/market_observations_template.csv')
+                    retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+                    usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+                    
+                    # Build dashboard dataset
+                    result = build_dashboard_pricing_dataset(market, retailer, usd)
+                    
+                    # Save
+                    from src.data.build_pricing_dataset import save_dashboard_pricing_dataset
+                    save_dashboard_pricing_dataset(result)
+                    
+                    st.success(f"✅ Build successful! Generated {len(result)} products.")
+                    st.markdown("**Next step:** Go back to Data Source selector and choose 'Processed Real Market Dataset'")
+                    
+                except Exception as e:
+                    st.error(f"❌ Build failed: {str(e)}")
 
 
 if __name__ == "__main__":
