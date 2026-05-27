@@ -1,5 +1,6 @@
 """Strategy-based pricing for Phase 2 (market-aware retailer pricing)."""
 
+import math
 from typing import Dict
 from src.pricing.rules import round_to_retail_price, calculate_current_margin
 
@@ -22,6 +23,17 @@ STRATEGY_DESCRIPTIONS = {
     "premium_positioning": "Price above market to signal quality/exclusivity",
     "clearance_cashflow": "Price at/below cost to clear inventory and generate cash",
 }
+
+
+def _safe_number(value, fallback: float = 0.0) -> float:
+    """Convert numeric inputs to finite floats, replacing missing values."""
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = float(fallback)
+    if not math.isfinite(numeric):
+        numeric = float(fallback)
+    return numeric
 
 
 def _calculate_minimum_allowed_price(cost_price: float, target_margin: float) -> float:
@@ -77,26 +89,26 @@ def calculate_strategy_prices(row: dict) -> Dict[str, float]:
         Dictionary with strategy -> price mapping
     """
     # Extract Phase 2 fields
-    cost_price = row.get("our_cost_price", 0.0)
-    target_margin = row.get("our_target_margin", 0.25)
+    cost_price = _safe_number(row.get("our_cost_price"), 0.0)
+    target_margin = _safe_number(row.get("our_target_margin"), 0.25)
     
     # Market prices (Phase 2 schema - public observable data)
-    market_min = row.get("market_min_price", 0.0)
-    market_median = row.get("market_median_price", 0.0)
-    market_max = row.get("market_max_price", 0.0)
+    market_min = _safe_number(row.get("market_min_price"), 0.0)
+    market_median = _safe_number(row.get("market_median_price"), market_min)
+    market_max = _safe_number(row.get("market_max_price"), market_median)
     
     # Platform-specific prices
-    torob_min = row.get("torob_min_price", market_min)
-    torob_median = row.get("torob_median_price", market_median)
-    digikala_price = row.get("digikala_price", market_median)
+    torob_min = _safe_number(row.get("torob_min_price"), market_min)
+    torob_median = _safe_number(row.get("torob_median_price"), market_median)
+    digikala_price = _safe_number(row.get("digikala_price"), market_median)
     
     # Global reference
-    theoretical_toman = row.get("theoretical_toman_price", 0.0)
+    theoretical_toman = _safe_number(row.get("theoretical_toman_price"), 0.0)
     
     # Inventory and demand signals
-    inventory = row.get("our_inventory", 0)
-    sales_7d = row.get("our_sales_7d", 0)
-    sales_30d = row.get("our_sales_30d", 0)
+    inventory = _safe_number(row.get("our_inventory"), 0)
+    sales_7d = _safe_number(row.get("our_sales_7d"), 0)
+    sales_30d = _safe_number(row.get("our_sales_30d"), 0)
     
     # Calculate constraints
     min_allowed = _calculate_minimum_allowed_price(cost_price, target_margin)
@@ -195,10 +207,10 @@ def select_strategy_price(row: dict, strategy: str = None) -> Dict:
     selected_price = strategy_prices.get(strategy, strategy_prices["balanced"])
     
     # Get market data for explanation
-    market_median = row.get("market_median_price", 0.0)
-    theoretical_toman = row.get("theoretical_toman_price", 0.0)
-    cost_price = row.get("our_cost_price", 0.0)
-    our_current_price = row.get("our_current_price", 0.0)
+    market_median = _safe_number(row.get("market_median_price"), 0.0)
+    theoretical_toman = _safe_number(row.get("theoretical_toman_price"), 0.0)
+    cost_price = _safe_number(row.get("our_cost_price"), 0.0)
+    our_current_price = _safe_number(row.get("our_current_price"), 0.0)
     
     # Calculate margins for context
     expected_margin = (selected_price - cost_price) / cost_price if cost_price > 0 else 0.0

@@ -144,6 +144,12 @@ class TestValidateFXSnapshot:
         }
         is_valid, issues = validate_fx_rate_snapshot(fx)
         assert is_valid, f"Validation failed: {issues}"
+
+    def test_formatted_and_persian_fx_rates_pass(self):
+        for rate in ["90,000", "۹۰,۰۰۰"]:
+            fx = {'source': 'manual', 'symbol': 'USDIRT', 'rate_toman': rate}
+            is_valid, issues = validate_fx_rate_snapshot(fx)
+            assert is_valid, f"Validation failed for {rate}: {issues}"
     
     def test_missing_source_fails(self):
         """Snapshot without source fails."""
@@ -190,6 +196,11 @@ class TestValidateFXSnapshot:
             'symbol': 'USDIRT',
             'rate_toman': 0.0,
         }
+        is_valid, issues = validate_fx_rate_snapshot(fx)
+        assert not is_valid
+
+    def test_invalid_string_rate_fails(self):
+        fx = {'source': 'manual', 'symbol': 'USDIRT', 'rate_toman': 'invalid'}
         is_valid, issues = validate_fx_rate_snapshot(fx)
         assert not is_valid
 
@@ -264,6 +275,16 @@ class TestAppendFXSnapshot:
         with pytest.raises(ValueError):
             append_fx_rate_snapshot(str(fx_file), fx)
 
+    def test_append_formatted_fx_rate_saves_numeric_toman(self, tmp_path):
+        fx_file = tmp_path / "fx_rates.csv"
+        fx_file.write_text("observed_at,source,symbol,rate_toman,rate_irr,notes\n")
+        fx = {'source': 'manual', 'symbol': 'USDIRT', 'rate_toman': '۹۰,۰۰۰'}
+
+        append_fx_rate_snapshot(str(fx_file), fx)
+
+        saved = pd.read_csv(str(fx_file))
+        assert saved.iloc[0]['rate_toman'] == 90000
+
 
 class TestGetLatestUpdate:
     """Tests for getting latest product update."""
@@ -312,6 +333,15 @@ class TestGetLatestUpdate:
         latest = get_latest_update_for_product(updates_df, 'NONEXISTENT')
         assert latest is None
 
+    def test_get_latest_update_uses_timestamp_then_last_row(self):
+        updates_df = pd.DataFrame([
+            {'update_id': 'UPD-LATE-FIRST', 'observed_at': '2026-05-27T12:00:00', 'product_id': 'APUL-GPS-1'},
+            {'update_id': 'UPD-OLD', 'observed_at': '2026-05-27T10:00:00', 'product_id': 'APUL-GPS-1'},
+            {'update_id': 'UPD-LATE-LAST', 'observed_at': '2026-05-27T12:00:00', 'product_id': 'APUL-GPS-1'},
+        ])
+        latest = get_latest_update_for_product(updates_df, 'APUL-GPS-1')
+        assert latest['update_id'] == 'UPD-LATE-LAST'
+
 
 class TestGetProductsMissingToday:
     """Tests for finding products missing today's update."""
@@ -319,7 +349,7 @@ class TestGetProductsMissingToday:
     def test_missing_update_all_products(self):
         """All active products are missing when no updates exist."""
         products_df = load_products_master('data/raw/products_master.csv')
-        updates_df = load_daily_market_updates('data/raw/daily_market_updates.csv')
+        updates_df = load_daily_market_updates('data/raw/daily_market_updates.csv').iloc[0:0].copy()
         
         missing = get_products_missing_update_today(products_df, updates_df)
         active_count = len(products_df[products_df.get('active', True) == True])

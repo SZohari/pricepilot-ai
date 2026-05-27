@@ -19,6 +19,102 @@ from src.data.market_aggregation import (
 )
 
 
+def _latest_rows_by_timestamp(df: pd.DataFrame, group_column: str) -> pd.DataFrame:
+    """Return the latest row per group, using file order to break timestamp ties."""
+    if df is None or df.empty or group_column not in df.columns:
+        return pd.DataFrame()
+
+    ordered = df.copy()
+    ordered['_row_order'] = range(len(ordered))
+    ordered['_observed_at'] = pd.to_datetime(ordered.get('observed_at'), errors='coerce')
+    ordered = ordered.sort_values(
+        ['_observed_at', '_row_order'],
+        kind='stable',
+        na_position='first',
+    )
+    return ordered.drop_duplicates(subset=[group_column], keep='last')
+
+
+def apply_daily_market_updates(
+    market_agg: pd.DataFrame,
+    daily_updates_df: Optional[pd.DataFrame],
+) -> pd.DataFrame:
+    """Overlay each product's latest manual market update on aggregated prices."""
+    result = market_agg.copy()
+    platform_fallbacks = {
+        'torob_min_price': 'market_min_price',
+        'torob_median_price': 'market_median_price',
+        'digikala_price': 'market_median_price',
+    }
+    for column, fallback_column in platform_fallbacks.items():
+        if column not in result.columns:
+            result[column] = result[fallback_column]
+        else:
+            result[column] = pd.to_numeric(result[column], errors='coerce').fillna(result[fallback_column])
+
+    latest_updates = _latest_rows_by_timestamp(daily_updates_df, 'product_id')
+    if latest_updates.empty:
+        return result
+
+    numeric_columns = [
+        'torob_min_price',
+        'torob_median_price',
+        'digikala_price',
+        'market_max_price',
+    ]
+    for column in numeric_columns:
+        if column in latest_updates.columns:
+            latest_updates[column] = pd.to_numeric(latest_updates[column], errors='coerce')
+
+    for _, update in latest_updates.iterrows():
+        matching = result['product_id'] == update['product_id']
+        if not matching.any():
+            continue
+
+        supplied_prices = []
+        for source_column, target_column in [
+            ('torob_min_price', 'market_min_price'),
+            ('torob_median_price', 'market_median_price'),
+            ('digikala_price', 'digikala_price'),
+        ]:
+            value = update.get(source_column)
+            if pd.notna(value) and value > 0:
+                result.loc[matching, source_column] = value
+                if source_column != 'digikala_price':
+                    result.loc[matching, target_column] = value
+                supplied_prices.append(value)
+
+        market_max = update.get('market_max_price')
+        if pd.notna(market_max) and market_max > 0:
+            result.loc[matching, 'market_max_price'] = market_max
+        elif supplied_prices:
+            inferred_prices = supplied_prices + [
+                result.loc[matching, 'market_min_price'].iloc[0],
+                result.loc[matching, 'market_median_price'].iloc[0],
+                result.loc[matching, 'market_max_price'].iloc[0],
+            ]
+            result.loc[matching, 'market_max_price'] = max(
+                value for value in inferred_prices if pd.notna(value)
+            )
+
+    return result
+
+
+def latest_positive_fx_rate(fx_snapshots_df: Optional[pd.DataFrame]) -> Optional[float]:
+    """Return the latest positive manual FX rate, or None when none is valid."""
+    if fx_snapshots_df is None or fx_snapshots_df.empty or 'rate_toman' not in fx_snapshots_df.columns:
+        return None
+
+    valid = fx_snapshots_df.copy()
+    valid['rate_toman'] = pd.to_numeric(valid['rate_toman'], errors='coerce')
+    valid = valid[valid['rate_toman'] > 0]
+    if valid.empty:
+        return None
+
+    latest = _latest_rows_by_timestamp(valid.assign(_fx_group='rate'), '_fx_group')
+    return float(latest.iloc[0]['rate_toman'])
+
+
 def load_market_observations(path: str) -> pd.DataFrame:
     """
     Load raw market observations from CSV.
@@ -120,6 +216,8 @@ def build_dashboard_pricing_dataset(
     retailer_df: pd.DataFrame,
     usd_df: pd.DataFrame,
     usd_rate: Optional[float] = None,
+    daily_updates_df: Optional[pd.DataFrame] = None,
+    fx_snapshots_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
     Build dashboard-ready Phase 2 pricing dataset from raw data sources.
@@ -136,6 +234,8 @@ def build_dashboard_pricing_dataset(
         retailer_df: Retailer internal data (from load_retailer_internal_data)
         usd_df: USD reference data (from load_global_usd_reference)
         usd_rate: Optional override for USD rate (uses usd_df value if not provided)
+        daily_updates_df: Optional manually entered market updates to overlay by product.
+        fx_snapshots_df: Optional manually entered FX snapshots; latest positive rate wins.
         
     Returns:
         DataFrame with Phase 2 schema, one row per product_id
@@ -143,6 +243,7 @@ def build_dashboard_pricing_dataset(
     
     # Step 1: Aggregate market observations
     market_agg = aggregate_market_observations(market_df)
+    market_agg = apply_daily_market_updates(market_agg, daily_updates_df)
     
     if len(market_agg) == 0:
         raise ValueError("No products found after aggregating market observations")
@@ -170,8 +271,11 @@ def build_dashboard_pricing_dataset(
     
     # Step 4: Calculate derived fields
     
-    # Use provided usd_rate override if available, otherwise use from merged data
-    if usd_rate is not None:
+    # A saved valid FX snapshot is the most recent user-entered exchange rate.
+    snapshot_rate = latest_positive_fx_rate(fx_snapshots_df)
+    if snapshot_rate is not None:
+        merged['usd_rate'] = snapshot_rate
+    elif usd_rate is not None:
         merged['usd_rate'] = usd_rate
     else:
         # Check if usd_rate exists in merged data

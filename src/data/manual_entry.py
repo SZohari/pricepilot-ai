@@ -14,6 +14,8 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
+from src.utils.formatting import parse_price_input
+
 
 def load_products_master(path: str = 'data/raw/products_master.csv') -> pd.DataFrame:
     """
@@ -158,16 +160,12 @@ def validate_fx_rate_snapshot(fx_dict: Dict) -> Tuple[bool, List[str]]:
     if 'symbol' not in fx_dict or not fx_dict['symbol']:
         issues.append("symbol is required")
     
-    # rate_toman is required and must be positive
-    if 'rate_toman' not in fx_dict or not fx_dict['rate_toman']:
+    # rate_toman is required and must parse to a positive integer toman value.
+    parsed_rate = parse_price_input(fx_dict.get('rate_toman'))
+    if parsed_rate is None:
         issues.append("rate_toman is required")
-    else:
-        try:
-            rate = float(fx_dict['rate_toman'])
-            if rate <= 0:
-                issues.append("rate_toman must be positive")
-        except (ValueError, TypeError):
-            issues.append("rate_toman must be numeric")
+    elif parsed_rate <= 0:
+        issues.append("rate_toman must be positive")
     
     return (len(issues) == 0, issues)
 
@@ -255,6 +253,8 @@ def append_fx_rate_snapshot(
     Raises:
         ValueError: If validation fails
     """
+    parsed_rate = parse_price_input(fx_dict.get('rate_toman'))
+
     # Validate first
     is_valid, issues = validate_fx_rate_snapshot(fx_dict)
     if not is_valid:
@@ -280,7 +280,7 @@ def append_fx_rate_snapshot(
         'observed_at': fx_dict.get('observed_at', now.isoformat()),
         'source': fx_dict.get('source', ''),
         'symbol': fx_dict.get('symbol', ''),
-        'rate_toman': fx_dict.get('rate_toman', ''),
+        'rate_toman': parsed_rate,
         'rate_irr': fx_dict.get('rate_irr', ''),
         'notes': fx_dict.get('notes', ''),
     }
@@ -316,8 +316,15 @@ def get_latest_update_for_product(
     if product_updates.empty:
         return None
     
-    # Get most recent (last row)
-    latest = product_updates.iloc[-1]
+    ordered = product_updates.copy()
+    ordered['_row_order'] = range(len(ordered))
+    ordered['_observed_at'] = pd.to_datetime(ordered['observed_at'], errors='coerce')
+    ordered = ordered.sort_values(
+        ['_observed_at', '_row_order'],
+        kind='stable',
+        na_position='first',
+    )
+    latest = ordered.iloc[-1].drop(labels=['_row_order', '_observed_at'])
     return latest.to_dict()
 
 

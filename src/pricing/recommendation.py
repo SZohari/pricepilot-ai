@@ -6,6 +6,7 @@ from src.pricing.risk import calculate_risk_level
 from src.pricing.strategies import (
     select_strategy_price,
     _calculate_iran_market_premium,
+    _safe_number,
 )
 
 
@@ -37,16 +38,16 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
     
     if is_phase2:
         # Phase 2: Use new schema fields
-        our_current_price = row.get("our_current_price", 0.0)
-        our_cost_price = row.get("our_cost_price", 0.0)
-        our_inventory = row.get("our_inventory", 0)
-        our_target_margin = row.get("our_target_margin", 0.25)
+        our_current_price = _safe_number(row.get("our_current_price"), 0.0)
+        our_cost_price = _safe_number(row.get("our_cost_price"), 0.0)
+        our_inventory = _safe_number(row.get("our_inventory"), 0)
+        our_target_margin = _safe_number(row.get("our_target_margin"), 0.25)
         # Use provided strategy override, fallback to row's strategy, default to "balanced"
         our_strategy = strategy if strategy is not None else row.get("our_strategy", "balanced")
         
-        market_median = row.get("market_median_price", our_current_price)
-        market_min = row.get("market_min_price", our_current_price * 0.95)
-        market_max = row.get("market_max_price", our_current_price * 1.05)
+        market_median = _safe_number(row.get("market_median_price"), our_current_price)
+        market_min = _safe_number(row.get("market_min_price"), our_current_price * 0.95)
+        market_max = _safe_number(row.get("market_max_price"), our_current_price * 1.05)
         
         # For backward compatibility, also set MVP field names if not present
         current_price = our_current_price
@@ -58,11 +59,22 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
         competitor_max = market_max
         
         # Phase 2 specific fields
-        theoretical_toman = row.get("theoretical_toman_price", 0.0)
+        theoretical_toman = _safe_number(row.get("theoretical_toman_price"), 0.0)
         iran_premium = _calculate_iran_market_premium(market_median, theoretical_toman)
         
         # Calculate strategy-based prices
-        strategy_result = select_strategy_price(row, our_strategy)
+        strategy_row = dict(row)
+        strategy_row.update({
+            "our_current_price": our_current_price,
+            "our_cost_price": our_cost_price,
+            "our_inventory": our_inventory,
+            "our_target_margin": our_target_margin,
+            "market_min_price": market_min,
+            "market_median_price": market_median,
+            "market_max_price": market_max,
+            "theoretical_toman_price": theoretical_toman,
+        })
+        strategy_result = select_strategy_price(strategy_row, our_strategy)
         recommended_price = strategy_result["selected_strategy_price"]
         strategy_prices = strategy_result["strategy_prices"]
         strategy_explanation = strategy_result["strategy_explanation"]
@@ -85,8 +97,8 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
         our_strategy = None
     
     # Optional fields (both schemas)
-    usd_change = row.get("usd_change_7d", 0.0)
-    supplier_lead_time = row.get("supplier_lead_time_days", 10)
+    usd_change = _safe_number(row.get("usd_change_7d"), 0.0)
+    supplier_lead_time = _safe_number(row.get("supplier_lead_time_days"), 10)
     
     # If Phase 2 but no strategy-based pricing yet, use MVP rules as fallback
     if not is_phase2 or recommended_price is None:

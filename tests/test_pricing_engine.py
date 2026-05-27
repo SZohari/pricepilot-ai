@@ -534,6 +534,45 @@ class TestStrategyBasedPricing:
         assert "theoretical_toman_price" in rec
         assert rec["theoretical_toman_price"] is not None
         assert rec["theoretical_toman_price"] > 0
+
+    def test_recommend_price_handles_nan_optional_numeric_fields(self):
+        phase2_product = {
+            "product_id": "SW_NAN",
+            "product_name": "NaN-safe Product",
+            "our_current_price": 3_000_000.0,
+            "our_cost_price": 2_000_000.0,
+            "our_inventory": 20,
+            "our_sales_7d": 2,
+            "our_sales_30d": 8,
+            "our_target_margin": 0.30,
+            "our_strategy": "balanced",
+            "theoretical_toman_price": 9_000_000.0,
+            "market_min_price": 2_700_000.0,
+            "market_median_price": 3_000_000.0,
+            "market_max_price": 3_500_000.0,
+            "torob_min_price": float("nan"),
+            "torob_median_price": float("nan"),
+            "digikala_price": float("nan"),
+        }
+        rec = recommend_price(phase2_product)
+        assert rec["recommended_price"] > 0
+
+    def test_processed_dataset_rows_can_be_recommended(self):
+        from src.data.build_pricing_dataset import (
+            build_dashboard_pricing_dataset,
+            load_global_usd_reference,
+            load_market_observations,
+            load_retailer_internal_data,
+        )
+
+        result = build_dashboard_pricing_dataset(
+            load_market_observations('data/raw/market_observations_template.csv'),
+            load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv'),
+            load_global_usd_reference('data/raw/global_usd_reference_template.csv'),
+        )
+
+        recommendations = [recommend_price(row.to_dict()) for _, row in result.iterrows()]
+        assert len(recommendations) == len(result)
     
     def test_iran_market_premium_calculated(self):
         """Test that iran_market_premium_pct is calculated."""

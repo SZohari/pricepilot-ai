@@ -1101,13 +1101,13 @@ def main():
                     'observed_at': datetime.now().isoformat(),
                     'notes': fx_notes,
                 }
-            
-            try:
-                append_fx_rate_snapshot('data/raw/fx_rate_snapshots.csv', fx_dict)
-                st.success(f"✅ FX rate saved: {fx_symbol} = {fx_rate:,.0f} Toman")
-                st.rerun()
-            except ValueError as e:
-                st.error(f"❌ Validation error: {str(e)}")
+
+                try:
+                    append_fx_rate_snapshot('data/raw/fx_rate_snapshots.csv', fx_dict)
+                    st.success(f"✅ FX rate saved: {fx_symbol} = {parsed_fx_rate:,.0f} Toman")
+                    st.rerun()
+                except ValueError as e:
+                    st.error(f"❌ Validation error: {str(e)}")
         
         st.markdown("---")
         
@@ -1131,9 +1131,17 @@ def main():
                     market = load_market_observations('data/raw/market_observations_template.csv')
                     retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
                     usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+                    daily_updates = load_daily_market_updates('data/raw/daily_market_updates.csv')
+                    fx_snapshots = load_fx_rate_snapshots('data/raw/fx_rate_snapshots.csv')
                     
                     # Build dashboard dataset
-                    result = build_dashboard_pricing_dataset(market, retailer, usd)
+                    result = build_dashboard_pricing_dataset(
+                        market,
+                        retailer,
+                        usd,
+                        daily_updates_df=daily_updates,
+                        fx_snapshots_df=fx_snapshots,
+                    )
                     
                     # Save
                     from src.data.build_pricing_dataset import save_dashboard_pricing_dataset

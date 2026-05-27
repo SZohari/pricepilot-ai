@@ -254,6 +254,133 @@ class TestBuildDashboardPricingDataset:
         assert (result['usd_rate'] == override_rate).all()
 
 
+class TestManualInputOverrides:
+    """Tests for daily market updates and FX snapshot pipeline inputs."""
+
+    @staticmethod
+    def build(daily_updates=None, fx_snapshots=None):
+        market = load_market_observations('data/raw/market_observations_template.csv')
+        retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+        usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        return build_dashboard_pricing_dataset(
+            market,
+            retailer,
+            usd,
+            daily_updates_df=daily_updates,
+            fx_snapshots_df=fx_snapshots,
+        )
+
+    @staticmethod
+    def daily_update(**values):
+        update = {
+            'observed_at': '2026-05-27T10:00:00',
+            'product_id': 'APUL-GPS-1',
+            'torob_min_price': np.nan,
+            'torob_median_price': np.nan,
+            'digikala_price': np.nan,
+            'market_max_price': np.nan,
+        }
+        update.update(values)
+        return pd.DataFrame([update])
+
+    def test_latest_daily_update_overrides_market_min_price(self):
+        updates = self.daily_update(torob_min_price=36_100_000)
+        result = self.build(daily_updates=updates).set_index('product_id')
+        assert result.loc['APUL-GPS-1', 'market_min_price'] == 36_100_000
+
+    def test_latest_daily_update_overrides_market_median_price(self):
+        updates = self.daily_update(torob_median_price=37_100_000)
+        result = self.build(daily_updates=updates).set_index('product_id')
+        assert result.loc['APUL-GPS-1', 'market_median_price'] == 37_100_000
+
+    def test_latest_daily_update_preserves_digikala_price(self):
+        updates = self.daily_update(digikala_price=38_100_000)
+        result = self.build(daily_updates=updates).set_index('product_id')
+        assert result.loc['APUL-GPS-1', 'digikala_price'] == 38_100_000
+
+    def test_daily_update_infers_safe_max_when_missing(self):
+        updates = self.daily_update(torob_min_price=36_100_000)
+        row = self.build(daily_updates=updates).set_index('product_id').loc['APUL-GPS-1']
+        assert pd.notna(row['market_max_price'])
+        assert row['market_max_price'] >= row['market_median_price']
+
+    def test_blank_median_does_not_replace_aggregated_market_median(self):
+        baseline = self.build().set_index('product_id').loc['APUL-GPS-1', 'market_median_price']
+        updates = self.daily_update(torob_min_price=36_100_000, torob_median_price=np.nan)
+        row = self.build(daily_updates=updates).set_index('product_id').loc['APUL-GPS-1']
+        assert row['market_median_price'] == baseline
+
+    def test_latest_daily_update_wins_and_last_row_breaks_ties(self):
+        updates = pd.DataFrame([
+            {'observed_at': '2026-05-27T11:00:00', 'product_id': 'APUL-GPS-1', 'torob_min_price': 35_000_000},
+            {'observed_at': '2026-05-27T12:00:00', 'product_id': 'APUL-GPS-1', 'torob_min_price': 36_000_000},
+            {'observed_at': '2026-05-27T12:00:00', 'product_id': 'APUL-GPS-1', 'torob_min_price': 37_000_000},
+        ])
+        result = self.build(daily_updates=updates).set_index('product_id')
+        assert result.loc['APUL-GPS-1', 'market_min_price'] == 37_000_000
+
+    def test_products_without_daily_updates_keep_observation_aggregation(self):
+        baseline = self.build().set_index('product_id')
+        updates = self.daily_update(torob_min_price=36_100_000)
+        updated = self.build(daily_updates=updates).set_index('product_id')
+        assert updated.loc['GAML-SE-1', 'market_min_price'] == baseline.loc['GAML-SE-1', 'market_min_price']
+
+    def test_latest_positive_fx_snapshot_overrides_usd_rate(self):
+        snapshots = pd.DataFrame([
+            {'observed_at': '2026-05-27T09:00:00', 'rate_toman': 50_000},
+            {'observed_at': '2026-05-27T11:00:00', 'rate_toman': 52_000},
+        ])
+        result = self.build(fx_snapshots=snapshots)
+        assert (result['usd_rate'] == 52_000).all()
+
+    def test_invalid_or_non_positive_fx_rates_are_ignored(self):
+        snapshots = pd.DataFrame([
+            {'observed_at': '2026-05-27T09:00:00', 'rate_toman': 'invalid'},
+            {'observed_at': '2026-05-27T11:00:00', 'rate_toman': 0},
+            {'observed_at': '2026-05-27T12:00:00', 'rate_toman': -1},
+        ])
+        result = self.build(fx_snapshots=snapshots)
+        assert (result['usd_rate'] == 45_000).all()
+
+    def test_later_blank_fx_snapshot_does_not_replace_latest_valid_rate(self):
+        snapshots = pd.DataFrame([
+            {'observed_at': '2026-05-27T09:00:00', 'rate_toman': 52_000},
+            {'observed_at': '2026-05-27T11:00:00', 'rate_toman': np.nan},
+        ])
+        result = self.build(fx_snapshots=snapshots)
+        assert (result['usd_rate'] == 52_000).all()
+
+    def test_fx_override_recalculates_theoretical_toman_price(self):
+        snapshots = pd.DataFrame([{'observed_at': '2026-05-27T11:00:00', 'rate_toman': 52_000}])
+        row = self.build(fx_snapshots=snapshots).set_index('product_id').loc['APUL-GPS-1']
+        assert row['theoretical_toman_price'] == int(row['base_usd_price'] * 52_000)
+
+    def test_fx_override_recalculates_iran_market_premium_pct(self):
+        snapshots = pd.DataFrame([{'observed_at': '2026-05-27T11:00:00', 'rate_toman': 52_000}])
+        row = self.build(fx_snapshots=snapshots).set_index('product_id').loc['APUL-GPS-1']
+        expected = (row['market_median_price'] - row['theoretical_toman_price']) / row['theoretical_toman_price']
+        assert row['iran_market_premium_pct'] == pytest.approx(expected)
+
+    def test_daily_updates_do_not_drop_expected_products(self):
+        updates = self.daily_update(torob_min_price=36_100_000)
+        result = self.build(daily_updates=updates)
+        assert set(result['product_id']) == {
+            'APUL-GPS-1', 'GAML-SE-1', 'FITB-CHG-1', 'HWAT-GTA-1', 'XIAO-MI-1',
+        }
+
+    def test_output_has_no_nan_in_numeric_pricing_fields(self):
+        updates = self.daily_update(torob_min_price=36_100_000)
+        snapshots = pd.DataFrame([{'observed_at': '2026-05-27T11:00:00', 'rate_toman': 52_000}])
+        result = self.build(daily_updates=updates, fx_snapshots=snapshots)
+        fields = [
+            'usd_rate', 'theoretical_toman_price', 'market_min_price',
+            'market_median_price', 'market_max_price', 'torob_min_price',
+            'torob_median_price', 'digikala_price', 'our_current_price',
+            'our_cost_price',
+        ]
+        assert not result[fields].isna().any().any()
+
+
 class TestSaveDashboardPricingDataset:
     """Tests for saving the dataset."""
     

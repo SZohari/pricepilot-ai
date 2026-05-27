@@ -23,6 +23,7 @@ from src.data.build_pricing_dataset import (
     build_dashboard_pricing_dataset,
     save_dashboard_pricing_dataset,
 )
+from src.data.manual_entry import load_daily_market_updates, load_fx_rate_snapshots
 
 
 def main():
@@ -44,12 +45,24 @@ def main():
         
         usd_ref = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
         print(f"   ✓ USD reference: {len(usd_ref)} rows")
+
+        daily_updates = load_daily_market_updates('data/raw/daily_market_updates.csv')
+        print(f"   ✓ Daily market updates: {len(daily_updates)} rows")
+
+        fx_snapshots = load_fx_rate_snapshots('data/raw/fx_rate_snapshots.csv')
+        print(f"   ✓ FX snapshots: {len(fx_snapshots)} rows")
         
         print()
         
         # Build dataset
         print("🔨 Building dashboard dataset...")
-        dashboard_data = build_dashboard_pricing_dataset(market_obs, retailer_data, usd_ref)
+        dashboard_data = build_dashboard_pricing_dataset(
+            market_obs,
+            retailer_data,
+            usd_ref,
+            daily_updates_df=daily_updates,
+            fx_snapshots_df=fx_snapshots,
+        )
         print(f"   ✓ Products aggregated: {len(dashboard_data)}")
         
         print()

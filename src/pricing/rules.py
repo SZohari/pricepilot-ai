@@ -1,5 +1,6 @@
 """Pricing rules engine for smartwatch recommendations."""
 
+import math
 from typing import List, Tuple
 
 
@@ -30,7 +31,13 @@ def round_to_retail_price(price: float, round_to: int = 10_000) -> float:
     Returns:
         Rounded price
     """
-    return round(price / round_to) * round_to
+    try:
+        numeric_price = float(price)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(numeric_price):
+        return 0.0
+    return round(numeric_price / round_to) * round_to
 
 
 def apply_pricing_rules(row: dict, usd_shock: float = 0.0) -> Tuple[float, List[str]]:
