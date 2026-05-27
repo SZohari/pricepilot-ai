@@ -20,6 +20,37 @@ import unicodedata
 from src.utils.formatting import parse_price_input
 
 
+def get_known_brands(products_df: Optional[pd.DataFrame]) -> List[str]:
+    """Return sorted unique non-empty brands from products_df."""
+    if products_df is None or products_df.empty:
+        return []
+    if 'brand' not in products_df.columns:
+        return []
+    brands = products_df['brand'].dropna().astype(str).str.strip()
+    brands = brands[brands != '']
+    unique = sorted(set(brands.tolist()))
+    return unique
+
+
+def normalize_brand(brand: str, known_brands: Optional[List[str]] = None) -> str:
+    """Normalize brand text: trim and title-case; if matches known brand (case-insensitive), return known spelling.
+
+    Examples:
+        normalize_brand(' apple ') -> 'Apple'
+        normalize_brand('SAMSUNG') -> 'Samsung'
+    """
+    if not brand or not isinstance(brand, str):
+        return ''
+    cleaned = brand.strip()
+    # Try to match known brands first (case-insensitive)
+    if known_brands:
+        for kb in known_brands:
+            if kb and cleaned.lower() == kb.lower():
+                return kb
+    # Default normalization: title case (preserve internal upper like 'iPhone' isn't relevant here)
+    return cleaned.title()
+
+
 VALID_PRODUCT_STRATEGIES = {
     'trust_builder',
     'balanced',
@@ -117,9 +148,13 @@ def append_new_product(
     if product_id_exists(product_id, products_df, retailer_df, usd_df):
         raise ValueError(f"product_id already exists: {product_id}")
 
+    # Normalize brand if possible and use canonical casing from existing catalog
+    known = get_known_brands(products_df)
+    normalized_brand = normalize_brand(payload.get('brand', ''), known_brands=known)
+
     products_row = {
         'product_id': product_id,
-        'brand': payload['brand'].strip(),
+        'brand': normalized_brand,
         'model': payload['model'].strip(),
         'product_name': payload['product_name'].strip(),
         'product_query': payload['product_query'].strip(),
@@ -142,7 +177,7 @@ def append_new_product(
     }
     usd_row = {
         'product_id': product_id,
-        'brand': payload['brand'].strip(),
+        'brand': normalized_brand,
         'model': payload['model'].strip(),
         'base_usd_price': float(payload['base_usd_price']),
         'base_usd_price_source': payload.get('base_usd_price_source', ''),

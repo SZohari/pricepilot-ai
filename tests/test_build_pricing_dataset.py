@@ -342,6 +342,14 @@ class TestManualInputOverrides:
         result = self.build(fx_snapshots=snapshots)
         assert (result['usd_rate'] == 52_000).all()
 
+    def test_accepts_large_manual_fx_rate_170k(self):
+        """Ensure a manual FX snapshot of 170,000 is accepted and applied."""
+        snapshots = pd.DataFrame([
+            {'observed_at': '2026-05-27T09:00:00', 'rate_toman': 170_000},
+        ])
+        result = self.build(fx_snapshots=snapshots)
+        assert (result['usd_rate'] == 170_000).all()
+
     def test_invalid_or_non_positive_fx_rates_are_ignored(self):
         snapshots = pd.DataFrame([
             {'observed_at': '2026-05-27T09:00:00', 'rate_toman': 'invalid'},

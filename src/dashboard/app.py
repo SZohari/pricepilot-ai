@@ -19,6 +19,8 @@ from src.data.manual_entry import (
     load_fx_rate_snapshots,
     append_daily_market_update,
     append_fx_rate_snapshot,
+    get_known_brands,
+    normalize_brand,
     get_latest_update_for_product,
     get_products_missing_update_today,
     validate_daily_market_update,
@@ -915,7 +917,15 @@ def main():
         st.markdown("### ➕ Add New Product")
         add_col1, add_col2, add_col3 = st.columns(3)
         with add_col1:
-            new_brand = st.text_input("Brand", key="new_product_brand")
+            # Brand selector: known brands plus an Other/Custom option
+            known = get_known_brands(products_df)
+            recommended = sorted(set(known))
+            brand_options = recommended + ["Other / Custom"]
+            brand_choice = st.selectbox("Brand", options=brand_options, index=0, key="new_product_brand_choice")
+            if brand_choice == "Other / Custom":
+                new_brand = st.text_input("Brand (Custom)", key="new_product_brand")
+            else:
+                new_brand = brand_choice
             new_model = st.text_input("Model", key="new_product_model")
             new_product_name = st.text_input("Product Name", key="new_product_name")
             new_product_query = st.text_input("Product Query", key="new_product_query")
@@ -965,9 +975,12 @@ def main():
             st.caption(f"Product ID: {generated_product_id}")
 
         if st.button("➕ Save New Product", key="save_new_product"):
+            # Normalize brand client-side before payload (append_new_product also normalizes)
+            normalized_brand = normalize_brand(new_brand, known_brands=known)
+
             new_payload = {
                 'product_id': generated_product_id,
-                'brand': new_brand,
+                'brand': normalized_brand,
                 'model': new_model,
                 'product_name': new_product_name,
                 'product_query': new_product_query,

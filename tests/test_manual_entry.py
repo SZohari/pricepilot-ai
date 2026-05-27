@@ -20,6 +20,8 @@ from src.data.manual_entry import (
     load_fx_rate_snapshots,
     append_daily_market_update,
     append_fx_rate_snapshot,
+    get_known_brands,
+    normalize_brand,
     generate_product_id,
     product_id_exists,
     validate_new_product_payload,
@@ -150,6 +152,19 @@ class TestAddNewProduct:
         assert product_id in set(usd['product_id'])
         assert retailer.iloc[0]['our_current_price'] == 40_000_000
         assert usd.iloc[0]['usd_rate'] == 90_000
+
+    def test_get_known_brands_and_normalize_brand(self):
+        products = pd.DataFrame([
+            {'product_id': 'P1', 'brand': 'Samsung', 'model': 'M1', 'product_name': 'S1'},
+            {'product_id': 'P2', 'brand': 'Xiaomi', 'model': 'M2', 'product_name': 'X1'},
+        ])
+        known = get_known_brands(products)
+        assert 'Samsung' in known and 'Xiaomi' in known
+
+        # Normalize to existing canonical brand
+        assert normalize_brand('samsung', known_brands=known) == 'Samsung'
+        # Unknown brand gets title-cased
+        assert normalize_brand('newbrand ltd') == 'Newbrand Ltd'
 
 
 class TestRetailerInternalUpdate:

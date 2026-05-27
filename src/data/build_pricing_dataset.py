@@ -307,6 +307,28 @@ def build_dashboard_pricing_dataset(
     
     if len(merged) == 0:
         raise ValueError("No products matched between aggregates and retailer data")
+
+    # If a products catalog is provided, prefer its authoritative metadata for
+    # brand/model/product_name/product_query when present (override merged values).
+    if products_df is not None and not products_df.empty:
+        key_cols = ['brand', 'model', 'product_name', 'product_query']
+        prod_index = products_df.set_index('product_id')
+        for col in key_cols:
+            if col not in prod_index.columns:
+                continue
+            # Build array aligned to merged rows
+            mapped = prod_index[col].reindex(merged['product_id']).values
+            # Ensure column exists in merged
+            if col not in merged.columns:
+                merged[col] = ''
+            # Apply overrides where catalog has a non-empty value
+            for i, v in enumerate(mapped):
+                try:
+                    if pd.notna(v) and str(v).strip() != '':
+                        merged.at[i, col] = v
+                except Exception:
+                    # Defensive: skip any mapping errors
+                    continue
     
     # Step 4: Calculate derived fields
     
