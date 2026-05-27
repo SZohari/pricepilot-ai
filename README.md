@@ -104,6 +104,21 @@ Run the API from the project root:
 
 Interactive API documentation is available at `http://127.0.0.1:8000/docs`.
 
+## Docker Usage
+
+Docker is optional. The local Python workflow above still works for development and demos.
+
+Run the API and Streamlit dashboard together from the project root:
+
+```powershell
+docker compose up --build
+```
+
+The containers share the project `data/` directory, so raw CSV updates and processed dataset builds remain available to both services.
+
+- API documentation: `http://localhost:8000/docs`
+- Dashboard: `http://localhost:8501`
+
 ## Data Workflow
 
 The **Market Update** tab supports the operational demo workflow:
@@ -160,7 +175,6 @@ The automated tests cover formatting and Persian-digit inputs, market and FX per
 - Move raw CSV persistence to a database with audit history
 - Integrate a reliable live FX API
 - Add compliant, source-approved market data collectors
-- Package reproducible deployment with Docker
 - Explore ML forecasting once enough trustworthy historical observations exist
 
 ## Scope
