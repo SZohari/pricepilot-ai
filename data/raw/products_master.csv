@@ -1,11 +1,12 @@
 product_id,brand,model,product_name,product_query,torob_url,digikala_url,global_reference_url,priority,active,notes
-APUL-GPS-1,Apple,Watch Ultra 2,Apple Watch Ultra 2,Apple Watch Ultra 2,,,,high,true,High-end outdoor smartwatch
-GAML-SE-1,Samsung,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,,,,high,true,Classic rotating bezel smartwatch
-FITB-CHG-1,Fitbit,Charge 6,Fitbit Charge 6,Fitbit Charge 6,,,,medium,true,Advanced fitness tracker
-HWAT-GTA-1,Huawei,Watch GT 4,Huawei Watch GT 4,Huawei Watch GT 4,,,,medium,true,Long battery life wearable
-XIAO-MI-1,Xiaomi,Watch S3,Xiaomi Watch S3,Xiaomi Watch S3,,,,low,true,Premium mid-range smartwatch
-GARM-PHX-1,Amazfit,GTR 4,Amazfit GTR 4,Amazfit GTR 4,,,,high,true,Multi-sport GPS smartwatch
-POLA-SEN-1,Haylou,RS4 Plus,Haylou RS4 Plus,Haylou RS4 Plus,,,,medium,true,Sleek budget smartwatch
-SUUN-4UT-1,Samsung,Galaxy Watch 7,Samsung Galaxy Watch 7,Samsung Galaxy Watch 7,,,,medium,true,Next-gen Samsung wearable
-MOBV-GB-1,Xiaomi,Redmi Watch 4,Redmi Watch 4,Redmi Watch 4,,,,low,true,Affordable everyday smartwatch
-SKGE-FMX-1,Apple,Watch SE 2,Apple Watch SE 2,Apple Watch SE 2,,,,low,true,Value-focused Apple wearable
+APUL-GPS-1,Apple,Watch Ultra 2,Apple Watch Ultra 2,Apple Watch Ultra 2,,,,high,True,High-end outdoor smartwatch
+GAML-SE-1,Samsung,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,,,,high,True,Classic rotating bezel smartwatch
+FITB-CHG-1,Fitbit,Charge 6,Fitbit Charge 6,Fitbit Charge 6,,,,medium,True,Advanced fitness tracker
+HWAT-GTA-1,Huawei,Watch GT 4,Huawei Watch GT 4,Huawei Watch GT 4,,,,medium,True,Long battery life wearable
+XIAO-MI-1,Xiaomi,Watch S3,Xiaomi Watch S3,Xiaomi Watch S3,,,,low,True,Premium mid-range smartwatch
+GARM-PHX-1,Amazfit,GTR 4,Amazfit GTR 4,Amazfit GTR 4,,,,high,True,Multi-sport GPS smartwatch
+POLA-SEN-1,Haylou,RS4 Plus,Haylou RS4 Plus,Haylou RS4 Plus,,,,medium,True,Sleek budget smartwatch
+SUUN-4UT-1,Samsung,Galaxy Watch 7,Samsung Galaxy Watch 7,Samsung Galaxy Watch 7,,,,medium,True,Next-gen Samsung wearable
+MOBV-GB-1,Xiaomi,Redmi Watch 4,Redmi Watch 4,Redmi Watch 4,,,,low,True,Affordable everyday smartwatch
+SKGE-FMX-1,Apple,Watch SE 2,Apple Watch SE 2,Apple Watch SE 2,,,,low,True,Value-focused Apple wearable
+APPLE-123,Apple,123,123,7,,,,medium,True,

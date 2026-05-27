@@ -13,8 +13,152 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+import math
+import re
+import unicodedata
 
 from src.utils.formatting import parse_price_input
+
+
+VALID_PRODUCT_STRATEGIES = {
+    'trust_builder',
+    'balanced',
+    'profit_protection',
+    'market_penetration',
+    'premium_positioning',
+    'clearance_cashflow',
+}
+
+
+def generate_product_id(brand: str, model: str) -> str:
+    """Create a stable uppercase hyphenated identifier from brand and model."""
+    text = f"{brand or ''} {model or ''}"
+    ascii_text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+    normalized = re.sub(r'[^A-Za-z0-9]+', '-', ascii_text).strip('-')
+    return normalized.upper()
+
+
+def product_id_exists(
+    product_id: str,
+    products_df: pd.DataFrame,
+    retailer_df: pd.DataFrame,
+    usd_df: pd.DataFrame,
+) -> bool:
+    """Check whether an identifier is already used in any product source file."""
+    for df in (products_df, retailer_df, usd_df):
+        if 'product_id' in df.columns and product_id in set(df['product_id'].astype(str)):
+            return True
+    return False
+
+
+def validate_new_product_payload(payload: Dict) -> Tuple[bool, List[str]]:
+    """Validate form values before a product is appended to raw data files."""
+    issues = []
+    for field in ['brand', 'model', 'product_name', 'product_query']:
+        if not str(payload.get(field, '')).strip():
+            issues.append(f"{field} is required")
+
+    if not str(payload.get('product_id', '')).strip():
+        issues.append("product_id could not be generated from brand and model")
+
+    current_price = parse_price_input(payload.get('our_current_price'))
+    cost_price = parse_price_input(payload.get('our_cost_price'))
+    usd_rate = parse_price_input(payload.get('usd_rate'))
+    if current_price is None or current_price <= 0:
+        issues.append("our_current_price must be positive")
+    if cost_price is None or cost_price <= 0:
+        issues.append("our_cost_price must be positive")
+    if current_price is not None and cost_price is not None and current_price <= cost_price:
+        issues.append("our_current_price must be greater than our_cost_price")
+    if usd_rate is None or usd_rate <= 0:
+        issues.append("usd_rate must be positive")
+
+    try:
+        if int(payload.get('our_inventory')) < 0:
+            issues.append("our_inventory must be >= 0")
+    except (TypeError, ValueError):
+        issues.append("our_inventory must be >= 0")
+
+    try:
+        margin = float(payload.get('our_target_margin'))
+        if not math.isfinite(margin) or not 0 <= margin <= 1:
+            issues.append("our_target_margin must be between 0 and 1")
+    except (TypeError, ValueError):
+        issues.append("our_target_margin must be between 0 and 1")
+
+    if payload.get('our_strategy') not in VALID_PRODUCT_STRATEGIES:
+        issues.append("our_strategy is invalid")
+
+    try:
+        base_usd_price = float(payload.get('base_usd_price'))
+        if not math.isfinite(base_usd_price) or base_usd_price <= 0:
+            issues.append("base_usd_price must be positive")
+    except (TypeError, ValueError):
+        issues.append("base_usd_price must be positive")
+
+    return (len(issues) == 0, issues)
+
+
+def append_new_product(
+    products_path: str,
+    retailer_path: str,
+    usd_path: str,
+    payload: Dict,
+) -> str:
+    """Append a validated new product across catalog, retailer, and USD sources."""
+    is_valid, issues = validate_new_product_payload(payload)
+    if not is_valid:
+        raise ValueError("New product validation failed:\n" + "\n".join(issues))
+
+    products_df = pd.read_csv(products_path)
+    retailer_df = pd.read_csv(retailer_path)
+    usd_df = pd.read_csv(usd_path)
+    product_id = payload['product_id']
+    if product_id_exists(product_id, products_df, retailer_df, usd_df):
+        raise ValueError(f"product_id already exists: {product_id}")
+
+    products_row = {
+        'product_id': product_id,
+        'brand': payload['brand'].strip(),
+        'model': payload['model'].strip(),
+        'product_name': payload['product_name'].strip(),
+        'product_query': payload['product_query'].strip(),
+        'torob_url': payload.get('torob_url', ''),
+        'digikala_url': payload.get('digikala_url', ''),
+        'global_reference_url': payload.get('global_reference_url', ''),
+        'priority': payload.get('priority', 'medium'),
+        'active': bool(payload.get('active', True)),
+        'notes': payload.get('catalog_notes', ''),
+    }
+    retailer_row = {
+        'product_id': product_id,
+        'our_current_price': parse_price_input(payload['our_current_price']),
+        'our_cost_price': parse_price_input(payload['our_cost_price']),
+        'our_inventory': int(payload['our_inventory']),
+        'our_sales_7d': int(payload.get('our_sales_7d', 0)),
+        'our_sales_30d': int(payload.get('our_sales_30d', 0)),
+        'our_target_margin': float(payload['our_target_margin']),
+        'our_strategy': payload['our_strategy'],
+    }
+    usd_row = {
+        'product_id': product_id,
+        'brand': payload['brand'].strip(),
+        'model': payload['model'].strip(),
+        'base_usd_price': float(payload['base_usd_price']),
+        'base_usd_price_source': payload.get('base_usd_price_source', ''),
+        'usd_rate': parse_price_input(payload['usd_rate']),
+        'source_url': payload.get('source_url', ''),
+        'observed_at': payload.get('observed_at', datetime.now().strftime('%Y-%m-%d')),
+        'notes': payload.get('usd_notes', ''),
+    }
+
+    products_df = pd.concat([products_df, pd.DataFrame([products_row])], ignore_index=True)
+    retailer_df = pd.concat([retailer_df, pd.DataFrame([retailer_row])], ignore_index=True)
+    usd_df = pd.concat([usd_df, pd.DataFrame([usd_row])], ignore_index=True)
+    products_df.to_csv(products_path, index=False)
+    retailer_df.to_csv(retailer_path, index=False)
+    usd_df.to_csv(usd_path, index=False)
+    return product_id
 
 
 def load_products_master(path: str = 'data/raw/products_master.csv') -> pd.DataFrame:

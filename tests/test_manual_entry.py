@@ -20,11 +20,16 @@ from src.data.manual_entry import (
     load_fx_rate_snapshots,
     append_daily_market_update,
     append_fx_rate_snapshot,
+    generate_product_id,
+    product_id_exists,
+    validate_new_product_payload,
+    append_new_product,
     get_latest_update_for_product,
     get_products_missing_update_today,
     validate_daily_market_update,
     validate_fx_rate_snapshot,
 )
+from src.data.build_pricing_dataset import load_retailer_internal_data, load_global_usd_reference
 
 
 class TestLoadProductsMaster:
@@ -47,6 +52,102 @@ class TestLoadProductsMaster:
         """Loading missing products file raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
             load_products_master('data/raw/nonexistent.csv')
+
+
+class TestAddNewProduct:
+    """Tests for creating new catalog products from dashboard payloads."""
+
+    @staticmethod
+    def valid_payload():
+        return {
+            'product_id': 'APPLE-WATCH-ULTRA-2',
+            'brand': 'Apple',
+            'model': 'Watch Ultra 2',
+            'product_name': 'Apple Watch Ultra 2',
+            'product_query': 'Apple Watch Ultra 2',
+            'priority': 'high',
+            'active': True,
+            'torob_url': '',
+            'digikala_url': '',
+            'global_reference_url': '',
+            'catalog_notes': 'new item',
+            'our_current_price': '40,000,000',
+            'our_cost_price': '30,000,000',
+            'our_inventory': 0,
+            'our_sales_7d': 0,
+            'our_sales_30d': 0,
+            'our_target_margin': 0.30,
+            'our_strategy': 'balanced',
+            'base_usd_price': '799.00',
+            'base_usd_price_source': 'official_site',
+            'usd_rate': '90,000',
+            'source_url': 'example.com/reference',
+            'observed_at': '2026-05-27',
+            'usd_notes': 'reference',
+        }
+
+    def test_generate_product_id_is_stable_and_hyphenated(self):
+        assert generate_product_id('Apple', 'Watch Ultra 2') == 'APPLE-WATCH-ULTRA-2'
+        assert generate_product_id(' Apple ', 'Watch / Ultra 2!') == 'APPLE-WATCH-ULTRA-2'
+
+    def test_duplicate_product_id_is_detected(self):
+        products = pd.DataFrame({'product_id': ['APPLE-WATCH-ULTRA-2']})
+        retailer = pd.DataFrame({'product_id': []})
+        usd = pd.DataFrame({'product_id': []})
+        assert product_id_exists('APPLE-WATCH-ULTRA-2', products, retailer, usd)
+
+    def test_valid_new_product_payload_passes_validation(self):
+        is_valid, issues = validate_new_product_payload(self.valid_payload())
+        assert is_valid, issues
+
+    def test_missing_required_fields_fail_validation(self):
+        payload = self.valid_payload()
+        payload['brand'] = ''
+        is_valid, issues = validate_new_product_payload(payload)
+        assert not is_valid
+        assert any('brand' in issue for issue in issues)
+
+    def test_current_price_below_cost_price_fails_validation(self):
+        payload = self.valid_payload()
+        payload['our_current_price'] = '20,000,000'
+        is_valid, issues = validate_new_product_payload(payload)
+        assert not is_valid
+        assert any('greater' in issue for issue in issues)
+
+    def test_invalid_target_margin_fails_validation(self):
+        payload = self.valid_payload()
+        payload['our_target_margin'] = 1.2
+        is_valid, issues = validate_new_product_payload(payload)
+        assert not is_valid
+        assert any('our_target_margin' in issue for issue in issues)
+
+    def test_append_new_product_writes_and_loads_all_three_files(self, tmp_path):
+        products_file = tmp_path / 'products.csv'
+        retailer_file = tmp_path / 'retailer.csv'
+        usd_file = tmp_path / 'usd.csv'
+        products_file.write_text(
+            'product_id,brand,model,product_name,product_query,torob_url,digikala_url,global_reference_url,priority,active,notes\n'
+        )
+        retailer_file.write_text(
+            'product_id,our_current_price,our_cost_price,our_inventory,our_sales_7d,our_sales_30d,our_target_margin,our_strategy\n'
+        )
+        usd_file.write_text(
+            'product_id,brand,model,base_usd_price,base_usd_price_source,usd_rate,source_url,observed_at,notes\n'
+        )
+
+        product_id = append_new_product(
+            str(products_file), str(retailer_file), str(usd_file), self.valid_payload()
+        )
+
+        products = load_products_master(str(products_file))
+        retailer = load_retailer_internal_data(str(retailer_file))
+        usd = load_global_usd_reference(str(usd_file))
+        assert product_id == 'APPLE-WATCH-ULTRA-2'
+        assert product_id in set(products['product_id'])
+        assert product_id in set(retailer['product_id'])
+        assert product_id in set(usd['product_id'])
+        assert retailer.iloc[0]['our_current_price'] == 40_000_000
+        assert usd.iloc[0]['usd_rate'] == 90_000
 
 
 class TestLoadDailyMarketUpdates:

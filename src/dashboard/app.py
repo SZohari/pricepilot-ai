@@ -23,6 +23,10 @@ from src.data.manual_entry import (
     get_products_missing_update_today,
     validate_daily_market_update,
     validate_fx_rate_snapshot,
+    generate_product_id,
+    product_id_exists,
+    validate_new_product_payload,
+    append_new_product,
 )
 from src.data.build_pricing_dataset import build_dashboard_pricing_dataset, load_market_observations, load_retailer_internal_data, load_global_usd_reference
 from src.pricing.recommendation import recommend_price
@@ -904,6 +908,115 @@ def main():
         except FileNotFoundError:
             st.error("❌ Products master or updates file not found. Please ensure data/raw/ files exist.")
             st.stop()
+
+        # Add a product to the catalog/reference files before recording market prices.
+        st.markdown("### ➕ Add New Product")
+        add_col1, add_col2, add_col3 = st.columns(3)
+        with add_col1:
+            new_brand = st.text_input("Brand", key="new_product_brand")
+            new_model = st.text_input("Model", key="new_product_model")
+            new_product_name = st.text_input("Product Name", key="new_product_name")
+            new_product_query = st.text_input("Product Query", key="new_product_query")
+            new_priority = st.selectbox("Priority", options=["high", "medium", "low"], index=1, key="new_product_priority")
+            new_active = st.checkbox("Active", value=True, key="new_product_active")
+        with add_col2:
+            new_current_price = st.text_input(
+                "Our Current Price (تومان)", placeholder="e.g. 37,200,000",
+                key="new_current_price", on_change=normalize_price_input_state, args=("new_current_price",),
+            )
+            show_price_input_feedback(new_current_price)
+            new_cost_price = st.text_input(
+                "Our Cost Price (تومان)", placeholder="e.g. 25,000,000",
+                key="new_cost_price", on_change=normalize_price_input_state, args=("new_cost_price",),
+            )
+            show_price_input_feedback(new_cost_price)
+            new_inventory = st.number_input("Inventory", min_value=0, step=1, key="new_inventory")
+            new_sales_7d = st.number_input("Sales (7d)", min_value=0, step=1, key="new_sales_7d")
+            new_sales_30d = st.number_input("Sales (30d)", min_value=0, step=1, key="new_sales_30d")
+            new_target_margin = st.number_input("Target Margin", min_value=0.0, max_value=1.0, value=0.30, step=0.01, key="new_target_margin")
+            new_strategy = st.selectbox(
+                "Strategy",
+                options=[
+                    "trust_builder", "balanced", "profit_protection",
+                    "market_penetration", "premium_positioning", "clearance_cashflow",
+                ],
+                index=1,
+                key="new_strategy",
+            )
+        with add_col3:
+            new_base_usd_price = st.text_input("Base USD Price", placeholder="e.g. 399.99", key="new_base_usd_price")
+            new_base_usd_source = st.text_input("Base USD Price Source", placeholder="e.g. official_site", key="new_base_usd_source")
+            new_usd_rate = st.text_input(
+                "USD Rate (تومان)", placeholder="e.g. 90,000",
+                key="new_usd_rate", on_change=normalize_price_input_state, args=("new_usd_rate",),
+            )
+            show_price_input_feedback(new_usd_rate)
+            new_source_url = st.text_input("USD Source URL", key="new_source_url")
+            new_observed_at = st.date_input("USD Observed At", key="new_observed_at")
+            new_torob_url = st.text_input("Torob URL", key="new_torob_url")
+            new_digikala_url = st.text_input("Digikala URL", key="new_digikala_url")
+            new_global_url = st.text_input("Global Reference URL", key="new_global_url")
+        new_catalog_notes = st.text_area("Product Notes", key="new_catalog_notes")
+        new_usd_notes = st.text_area("USD Reference Notes", key="new_usd_notes")
+        generated_product_id = generate_product_id(new_brand, new_model)
+        if generated_product_id:
+            st.caption(f"Product ID: {generated_product_id}")
+
+        if st.button("➕ Save New Product", key="save_new_product"):
+            new_payload = {
+                'product_id': generated_product_id,
+                'brand': new_brand,
+                'model': new_model,
+                'product_name': new_product_name,
+                'product_query': new_product_query,
+                'priority': new_priority,
+                'active': new_active,
+                'torob_url': new_torob_url,
+                'digikala_url': new_digikala_url,
+                'global_reference_url': new_global_url,
+                'catalog_notes': new_catalog_notes,
+                'our_current_price': new_current_price,
+                'our_cost_price': new_cost_price,
+                'our_inventory': new_inventory,
+                'our_sales_7d': new_sales_7d,
+                'our_sales_30d': new_sales_30d,
+                'our_target_margin': new_target_margin,
+                'our_strategy': new_strategy,
+                'base_usd_price': new_base_usd_price,
+                'base_usd_price_source': new_base_usd_source,
+                'usd_rate': new_usd_rate,
+                'source_url': new_source_url,
+                'observed_at': new_observed_at.isoformat(),
+                'usd_notes': new_usd_notes,
+            }
+            is_valid, issues = validate_new_product_payload(new_payload)
+            try:
+                retailer_df = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+                usd_df = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+                duplicate = product_id_exists(generated_product_id, products_df, retailer_df, usd_df)
+            except (FileNotFoundError, ValueError) as e:
+                is_valid = False
+                issues.append(str(e))
+                duplicate = False
+            if duplicate:
+                issues.append(f"product_id already exists: {generated_product_id}")
+                is_valid = False
+            if not is_valid:
+                for issue in issues:
+                    st.error(issue)
+            else:
+                try:
+                    append_new_product(
+                        'data/raw/products_master.csv',
+                        'data/raw/retailer_internal_demo_template.csv',
+                        'data/raw/global_usd_reference_template.csv',
+                        new_payload,
+                    )
+                    st.success("Product added successfully. Please refresh the page to see it in the selector.")
+                except ValueError as e:
+                    st.error(str(e))
+
+        st.markdown("---")
         
         # Section 1: Today's Update Status
         st.markdown("### 📊 Today's Update Status")
@@ -1141,6 +1254,7 @@ def main():
                         usd,
                         daily_updates_df=daily_updates,
                         fx_snapshots_df=fx_snapshots,
+                        products_df=products_df,
                     )
                     
                     # Save

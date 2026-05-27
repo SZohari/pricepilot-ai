@@ -380,6 +380,40 @@ class TestManualInputOverrides:
         ]
         assert not result[fields].isna().any().any()
 
+    def test_catalog_product_requires_manual_market_update_before_output(self):
+        market = load_market_observations('data/raw/market_observations_template.csv')
+        retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+        usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        products = pd.DataFrame([{
+            'product_id': 'NEW-WATCH-1', 'product_name': 'New Watch 1',
+            'brand': 'New', 'model': 'Watch 1',
+        }])
+        retailer = pd.concat([retailer, pd.DataFrame([{
+            'product_id': 'NEW-WATCH-1', 'our_current_price': 10_000_000,
+            'our_cost_price': 7_000_000, 'our_inventory': 1, 'our_sales_7d': 0,
+            'our_sales_30d': 0, 'our_target_margin': 0.3, 'our_strategy': 'balanced',
+        }])], ignore_index=True)
+        usd = pd.concat([usd, pd.DataFrame([{
+            'product_id': 'NEW-WATCH-1', 'brand': 'New', 'model': 'Watch 1',
+            'base_usd_price': 100, 'base_usd_price_source': 'manual',
+            'usd_rate': 45_000, 'source_url': '', 'observed_at': '2026-05-27', 'notes': '',
+        }])], ignore_index=True)
+
+        without_update = build_dashboard_pricing_dataset(market, retailer, usd, products_df=products)
+        assert 'NEW-WATCH-1' not in set(without_update['product_id'])
+
+        update = pd.DataFrame([{
+            'product_id': 'NEW-WATCH-1', 'observed_at': '2026-05-27T12:00:00',
+            'torob_min_price': 9_500_000, 'torob_median_price': 10_000_000,
+            'digikala_price': 10_100_000, 'market_max_price': 10_200_000,
+        }])
+        with_update = build_dashboard_pricing_dataset(
+            market, retailer, usd, daily_updates_df=update, products_df=products,
+        )
+        row = with_update.set_index('product_id').loc['NEW-WATCH-1']
+        assert row['market_min_price'] == 9_500_000
+        assert row['product_name'] == 'New Watch 1'
+
 
 class TestSaveDashboardPricingDataset:
     """Tests for saving the dataset."""

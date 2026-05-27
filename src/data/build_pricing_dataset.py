@@ -38,6 +38,7 @@ def _latest_rows_by_timestamp(df: pd.DataFrame, group_column: str) -> pd.DataFra
 def apply_daily_market_updates(
     market_agg: pd.DataFrame,
     daily_updates_df: Optional[pd.DataFrame],
+    products_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """Overlay each product's latest manual market update on aggregated prices."""
     result = market_agg.copy()
@@ -65,6 +66,42 @@ def apply_daily_market_updates(
     for column in numeric_columns:
         if column in latest_updates.columns:
             latest_updates[column] = pd.to_numeric(latest_updates[column], errors='coerce')
+
+    if products_df is not None and not products_df.empty:
+        existing_ids = set(result['product_id'])
+        for _, update in latest_updates.iterrows():
+            if update['product_id'] in existing_ids:
+                continue
+            catalog = products_df[products_df['product_id'] == update['product_id']]
+            supplied = [
+                update.get(column) for column in numeric_columns
+                if pd.notna(update.get(column)) and update.get(column) > 0
+            ]
+            if catalog.empty or not supplied:
+                continue
+            catalog_row = catalog.iloc[0]
+            min_price = update.get('torob_min_price')
+            median_price = update.get('torob_median_price')
+            max_price = update.get('market_max_price')
+            min_price = min_price if pd.notna(min_price) and min_price > 0 else min(supplied)
+            median_price = median_price if pd.notna(median_price) and median_price > 0 else min_price
+            max_price = max_price if pd.notna(max_price) and max_price > 0 else max(supplied + [min_price, median_price])
+            result = pd.concat([result, pd.DataFrame([{
+                'product_id': update['product_id'],
+                'product_name': catalog_row['product_name'],
+                'brand': catalog_row['brand'],
+                'model': catalog_row['model'],
+                'market_min_price': float(min_price),
+                'market_median_price': float(median_price),
+                'market_max_price': float(max_price),
+                'market_avg_price': float(sum(supplied) / len(supplied)),
+                'seller_count': 1,
+                'available_seller_count': 1,
+                'torob_min_price': float(min_price),
+                'torob_median_price': float(median_price),
+                'digikala_price': float(update.get('digikala_price')) if pd.notna(update.get('digikala_price')) and update.get('digikala_price') > 0 else float(median_price),
+            }])], ignore_index=True)
+            existing_ids.add(update['product_id'])
 
     for _, update in latest_updates.iterrows():
         matching = result['product_id'] == update['product_id']
@@ -218,6 +255,7 @@ def build_dashboard_pricing_dataset(
     usd_rate: Optional[float] = None,
     daily_updates_df: Optional[pd.DataFrame] = None,
     fx_snapshots_df: Optional[pd.DataFrame] = None,
+    products_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
     Build dashboard-ready Phase 2 pricing dataset from raw data sources.
@@ -236,6 +274,7 @@ def build_dashboard_pricing_dataset(
         usd_rate: Optional override for USD rate (uses usd_df value if not provided)
         daily_updates_df: Optional manually entered market updates to overlay by product.
         fx_snapshots_df: Optional manually entered FX snapshots; latest positive rate wins.
+        products_df: Optional product catalog for products introduced by manual updates.
         
     Returns:
         DataFrame with Phase 2 schema, one row per product_id
@@ -243,7 +282,7 @@ def build_dashboard_pricing_dataset(
     
     # Step 1: Aggregate market observations
     market_agg = aggregate_market_observations(market_df)
-    market_agg = apply_daily_market_updates(market_agg, daily_updates_df)
+    market_agg = apply_daily_market_updates(market_agg, daily_updates_df, products_df)
     
     if len(market_agg) == 0:
         raise ValueError("No products found after aggregating market observations")

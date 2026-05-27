@@ -23,7 +23,7 @@ from src.data.build_pricing_dataset import (
     build_dashboard_pricing_dataset,
     save_dashboard_pricing_dataset,
 )
-from src.data.manual_entry import load_daily_market_updates, load_fx_rate_snapshots
+from src.data.manual_entry import load_products_master, load_daily_market_updates, load_fx_rate_snapshots
 
 
 def main():
@@ -51,6 +51,9 @@ def main():
 
         fx_snapshots = load_fx_rate_snapshots('data/raw/fx_rate_snapshots.csv')
         print(f"   ✓ FX snapshots: {len(fx_snapshots)} rows")
+
+        products = load_products_master('data/raw/products_master.csv')
+        print(f"   ✓ Product catalog: {len(products)} rows")
         
         print()
         
@@ -62,6 +65,7 @@ def main():
             usd_ref,
             daily_updates_df=daily_updates,
             fx_snapshots_df=fx_snapshots,
+            products_df=products,
         )
         print(f"   ✓ Products aggregated: {len(dashboard_data)}")
         

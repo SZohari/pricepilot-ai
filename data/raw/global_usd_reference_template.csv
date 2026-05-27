@@ -1,6 +1,7 @@
 product_id,brand,model,base_usd_price,base_usd_price_source,usd_rate,source_url,observed_at,notes
-APUL-GPS-1,Apple,Watch Ultra GPS,799.00,official_site,45000,apple.com/shop/buy-watch,2026-05-01,US retail price
+APUL-GPS-1,Apple,Watch Ultra GPS,799.0,official_site,45000,apple.com/shop/buy-watch,2026-05-01,US retail price
 GAML-SE-1,Samsung,Galaxy Watch 6 Classic,399.99,official_site,45000,samsung.com/us/smartphones/smartwatches,2026-05-01,US retail price
 FITB-CHG-1,Fitbit,Charge 6,159.95,best_buy,45000,bestbuy.com,2026-05-01,Major US retailer
-HWAT-GTA-1,Huawei,Watch GT4,279.00,external_report,45000,tech_review_site.com,2026-05-01,Market analysis report
+HWAT-GTA-1,Huawei,Watch GT4,279.0,external_report,45000,tech_review_site.com,2026-05-01,Market analysis report
 XIAO-MI-1,Xiaomi,Band 8 Pro,79.99,official_site,45000,xiaomi.com/global,2026-05-01,Global retail price
+APPLE-123,Apple,123,50.0,,180000,,2026-05-27,

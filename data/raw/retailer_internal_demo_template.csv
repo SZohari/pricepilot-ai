@@ -1,6 +1,7 @@
 product_id,our_current_price,our_cost_price,our_inventory,our_sales_7d,our_sales_30d,our_target_margin,our_strategy
 APUL-GPS-1,35800000,25200000,5,2,8,0.35,balanced
-GAML-SE-1,18900000,13500000,12,3,15,0.30,market_penetration
+GAML-SE-1,18900000,13500000,12,3,15,0.3,market_penetration
 FITB-CHG-1,9500000,6800000,25,8,32,0.28,trust_builder
-HWAT-GTA-1,8600000,6100000,18,5,22,0.30,balanced
+HWAT-GTA-1,8600000,6100000,18,5,22,0.3,balanced
 XIAO-MI-1,5400000,3900000,42,15,68,0.25,market_penetration
+APPLE-123,10000000,8000000,0,0,0,0.3,balanced
