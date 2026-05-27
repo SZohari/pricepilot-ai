@@ -161,6 +161,71 @@ def append_new_product(
     return product_id
 
 
+def validate_retailer_internal_payload(payload: Dict) -> Tuple[bool, List[str]]:
+    """Validate editable store data before updating the retailer CSV."""
+    issues = []
+    current_price = parse_price_input(payload.get('our_current_price'))
+    cost_price = parse_price_input(payload.get('our_cost_price'))
+
+    if current_price is None or current_price <= 0:
+        issues.append("our_current_price must be positive")
+    if cost_price is None or cost_price <= 0:
+        issues.append("our_cost_price must be positive")
+    if current_price is not None and cost_price is not None and current_price <= cost_price:
+        issues.append("our_current_price must be greater than our_cost_price")
+
+    for field in ['our_inventory', 'our_sales_7d', 'our_sales_30d']:
+        try:
+            if int(payload.get(field)) < 0:
+                issues.append(f"{field} must be >= 0")
+        except (TypeError, ValueError):
+            issues.append(f"{field} must be >= 0")
+
+    try:
+        margin = float(payload.get('our_target_margin'))
+        if not math.isfinite(margin) or not 0 <= margin <= 1:
+            issues.append("our_target_margin must be between 0 and 1")
+    except (TypeError, ValueError):
+        issues.append("our_target_margin must be between 0 and 1")
+
+    if payload.get('our_strategy') not in VALID_PRODUCT_STRATEGIES:
+        issues.append("our_strategy is invalid")
+
+    return (len(issues) == 0, issues)
+
+
+def upsert_retailer_internal_data(path: str, product_id: str, payload: Dict) -> bool:
+    """Update one product's store data, or insert it if it is not yet present."""
+    if not str(product_id).strip():
+        raise ValueError("product_id is required")
+
+    is_valid, issues = validate_retailer_internal_payload(payload)
+    if not is_valid:
+        raise ValueError("Retailer internal validation failed:\n" + "\n".join(issues))
+
+    df = pd.read_csv(path)
+    new_values = {
+        'product_id': product_id,
+        'our_current_price': parse_price_input(payload['our_current_price']),
+        'our_cost_price': parse_price_input(payload['our_cost_price']),
+        'our_inventory': int(payload['our_inventory']),
+        'our_sales_7d': int(payload['our_sales_7d']),
+        'our_sales_30d': int(payload['our_sales_30d']),
+        'our_target_margin': float(payload['our_target_margin']),
+        'our_strategy': payload['our_strategy'],
+    }
+    matching = df['product_id'] == product_id
+    if matching.any():
+        for column, value in new_values.items():
+            df.loc[matching, column] = value
+        df = df.drop_duplicates(subset=['product_id'], keep='last')
+    else:
+        df = pd.concat([df, pd.DataFrame([new_values])], ignore_index=True)
+
+    df.to_csv(path, index=False)
+    return True
+
+
 def load_products_master(path: str = 'data/raw/products_master.csv') -> pd.DataFrame:
     """
     Load product master list.

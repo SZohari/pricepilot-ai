@@ -24,6 +24,8 @@ from src.data.manual_entry import (
     product_id_exists,
     validate_new_product_payload,
     append_new_product,
+    validate_retailer_internal_payload,
+    upsert_retailer_internal_data,
     get_latest_update_for_product,
     get_products_missing_update_today,
     validate_daily_market_update,
@@ -43,10 +45,10 @@ class TestLoadProductsMaster:
         assert 'brand' in df.columns
         assert 'product_name' in df.columns
     
-    def test_products_master_has_ten_products(self):
-        """Products master contains 10 products."""
+    def test_products_master_keeps_baseline_catalog(self):
+        """Products master contains the baseline products and may include user additions."""
         df = load_products_master('data/raw/products_master.csv')
-        assert len(df) == 10, f"Expected 10 products, got {len(df)}"
+        assert len(df) >= 10, f"Expected at least 10 products, got {len(df)}"
     
     def test_load_missing_file_raises_error(self):
         """Loading missing products file raises FileNotFoundError."""
@@ -148,6 +150,83 @@ class TestAddNewProduct:
         assert product_id in set(usd['product_id'])
         assert retailer.iloc[0]['our_current_price'] == 40_000_000
         assert usd.iloc[0]['usd_rate'] == 90_000
+
+
+class TestRetailerInternalUpdate:
+    """Tests for seller-owned store data updates."""
+
+    @staticmethod
+    def valid_payload():
+        return {
+            'our_current_price': '40,000,000',
+            'our_cost_price': '30,000,000',
+            'our_inventory': 5,
+            'our_sales_7d': 2,
+            'our_sales_30d': 8,
+            'our_target_margin': 0.30,
+            'our_strategy': 'balanced',
+        }
+
+    @staticmethod
+    def write_retailer_file(path):
+        path.write_text(
+            'product_id,our_current_price,our_cost_price,our_inventory,our_sales_7d,our_sales_30d,our_target_margin,our_strategy\n'
+            'P1,10000000,7000000,1,0,0,0.3,balanced\n'
+            'P2,20000000,15000000,2,1,2,0.25,trust_builder\n'
+        )
+
+    def test_valid_payload_passes_validation(self):
+        is_valid, issues = validate_retailer_internal_payload(self.valid_payload())
+        assert is_valid, issues
+
+    def test_missing_or_invalid_price_fails_validation(self):
+        payload = self.valid_payload()
+        payload['our_current_price'] = ''
+        is_valid, issues = validate_retailer_internal_payload(payload)
+        assert not is_valid
+        payload['our_current_price'] = 'not-a-price'
+        is_valid, issues = validate_retailer_internal_payload(payload)
+        assert not is_valid
+
+    def test_current_price_below_cost_price_fails_validation(self):
+        payload = self.valid_payload()
+        payload['our_current_price'] = '20,000,000'
+        is_valid, issues = validate_retailer_internal_payload(payload)
+        assert not is_valid
+        assert any('greater' in issue for issue in issues)
+
+    def test_invalid_target_margin_fails_validation(self):
+        payload = self.valid_payload()
+        payload['our_target_margin'] = 1.1
+        is_valid, issues = validate_retailer_internal_payload(payload)
+        assert not is_valid
+
+    def test_invalid_strategy_fails_validation(self):
+        payload = self.valid_payload()
+        payload['our_strategy'] = 'unknown'
+        is_valid, issues = validate_retailer_internal_payload(payload)
+        assert not is_valid
+
+    def test_upsert_updates_existing_row_without_duplication(self, tmp_path):
+        retailer_file = tmp_path / 'retailer.csv'
+        self.write_retailer_file(retailer_file)
+
+        upsert_retailer_internal_data(str(retailer_file), 'P1', self.valid_payload())
+        loaded = load_retailer_internal_data(str(retailer_file))
+
+        assert (loaded['product_id'] == 'P1').sum() == 1
+        assert loaded.set_index('product_id').loc['P1', 'our_current_price'] == 40_000_000
+        assert loaded.set_index('product_id').loc['P2', 'our_current_price'] == 20_000_000
+
+    def test_upsert_adds_new_product_row_if_missing(self, tmp_path):
+        retailer_file = tmp_path / 'retailer.csv'
+        self.write_retailer_file(retailer_file)
+
+        upsert_retailer_internal_data(str(retailer_file), 'P3', self.valid_payload())
+        loaded = load_retailer_internal_data(str(retailer_file))
+
+        assert 'P3' in set(loaded['product_id'])
+        assert loaded.set_index('product_id').loc['P3', 'our_current_price'] == 40_000_000
 
 
 class TestLoadDailyMarketUpdates:

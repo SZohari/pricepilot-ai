@@ -253,6 +253,15 @@ class TestBuildDashboardPricingDataset:
         # All rows should have the override rate
         assert (result['usd_rate'] == override_rate).all()
 
+    def test_updated_retailer_current_price_appears_in_built_output(self):
+        market_df = load_market_observations('data/raw/market_observations_template.csv')
+        retailer_df = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+        usd_df = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        retailer_df.loc[retailer_df['product_id'] == 'APUL-GPS-1', 'our_current_price'] = 41_000_000
+
+        result = build_dashboard_pricing_dataset(market_df, retailer_df, usd_df).set_index('product_id')
+        assert result.loc['APUL-GPS-1', 'our_current_price'] == 41_000_000
+
 
 class TestManualInputOverrides:
     """Tests for daily market updates and FX snapshot pipeline inputs."""
@@ -502,8 +511,8 @@ class TestTemplateAlignment:
         prices = pd.to_numeric(df['listed_price'], errors='coerce')
         assert not prices.isna().any(), "Some prices cannot be parsed as numeric"
     
-    def test_all_templates_share_product_ids(self):
-        """All three raw templates contain the same 5 product_ids."""
+    def test_reference_templates_cover_market_products(self):
+        """Retailer and USD files retain entries needed for all observed products."""
         market = pd.read_csv('data/raw/market_observations_template.csv')
         retailer = pd.read_csv('data/raw/retailer_internal_demo_template.csv')
         usd = pd.read_csv('data/raw/global_usd_reference_template.csv')
@@ -512,9 +521,8 @@ class TestTemplateAlignment:
         retailer_ids = set(retailer['product_id'].unique())
         usd_ids = set(usd['product_id'].unique())
         
-        # Should all be the same
-        assert market_ids == retailer_ids, f"Market {market_ids} != Retailer {retailer_ids}"
-        assert retailer_ids == usd_ids, f"Retailer {retailer_ids} != USD {usd_ids}"
+        assert market_ids.issubset(retailer_ids), f"Market {market_ids} not covered by Retailer {retailer_ids}"
+        assert market_ids.issubset(usd_ids), f"Market {market_ids} not covered by USD {usd_ids}"
         
         # Should have exactly 5 products
         assert len(market_ids) == 5, f"Expected 5 products, got {len(market_ids)}"
@@ -597,8 +605,8 @@ class TestLoadProcessedPricingData:
         assert len(df) > 0
         assert 'product_id' in df.columns
     
-    def test_load_processed_data_has_five_products(self):
-        """Loaded processed data contains exactly 5 products."""
+    def test_load_processed_data_has_baseline_products(self):
+        """Loaded processed data keeps baseline products and may include user additions."""
         from src.data.build_pricing_dataset import load_processed_pricing_data
         
         # Build the processed dataset if needed
@@ -610,7 +618,8 @@ class TestLoadProcessedPricingData:
             save_dashboard_pricing_dataset(result)
         
         df = load_processed_pricing_data()
-        assert len(df) == 5, f"Expected 5 products, got {len(df)}"
+        expected_ids = {'APUL-GPS-1', 'GAML-SE-1', 'FITB-CHG-1', 'HWAT-GTA-1', 'XIAO-MI-1'}
+        assert expected_ids.issubset(set(df['product_id']))
     
     def test_load_processed_data_has_required_fields(self):
         """Loaded processed data has all required Phase 2 fields."""

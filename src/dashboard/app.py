@@ -27,6 +27,8 @@ from src.data.manual_entry import (
     product_id_exists,
     validate_new_product_payload,
     append_new_product,
+    validate_retailer_internal_payload,
+    upsert_retailer_internal_data,
 )
 from src.data.build_pricing_dataset import build_dashboard_pricing_dataset, load_market_observations, load_retailer_internal_data, load_global_usd_reference
 from src.pricing.recommendation import recommend_price
@@ -1179,8 +1181,112 @@ def main():
                     st.error(f"❌ Validation error: {str(e)}")
         
         st.markdown("---")
+
+        # Section 3: Our store data
+        st.markdown("### 🏪 Our Store Data")
+        st.markdown("Update your own pricing, inventory, sales, margin, and strategy.")
+        try:
+            store_df = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
+        except (FileNotFoundError, ValueError) as e:
+            st.error(str(e))
+            store_df = pd.DataFrame()
+
+        store_product_label = st.selectbox(
+            "Select Product for Store Data",
+            options=list(product_options.keys()),
+            key="store_product_select",
+        )
+        store_product_id = product_options[store_product_label]
+        stored_rows = store_df[store_df['product_id'] == store_product_id] if not store_df.empty else pd.DataFrame()
+        stored = stored_rows.iloc[-1] if not stored_rows.empty else None
+
+        if stored is not None:
+            st.caption(
+                f"Current: {format_toman(stored['our_current_price'])} | "
+                f"Cost: {format_toman(stored['our_cost_price'])} | "
+                f"Inventory: {int(stored['our_inventory'])} | "
+                f"Sales 7d/30d: {int(stored['our_sales_7d'])}/{int(stored['our_sales_30d'])} | "
+                f"Margin: {float(stored['our_target_margin']):.0%} | "
+                f"Strategy: {stored['our_strategy']}"
+            )
+
+        store_current_default = format_price_input_value(stored['our_current_price']) if stored is not None else ""
+        store_cost_default = format_price_input_value(stored['our_cost_price']) if stored is not None else ""
+        store_current_key = f"store_current_price_{store_product_id}"
+        store_cost_key = f"store_cost_price_{store_product_id}"
+        store_col1, store_col2 = st.columns(2)
+        with store_col1:
+            store_current_price = st.text_input(
+                "Our Current Price (تومان)", value=store_current_default,
+                key=store_current_key, on_change=normalize_price_input_state, args=(store_current_key,),
+            )
+            show_price_input_feedback(store_current_price)
+            store_inventory = st.number_input(
+                "Our Inventory", min_value=0,
+                value=int(stored['our_inventory']) if stored is not None else 0,
+                step=1, key=f"store_inventory_{store_product_id}",
+            )
+            store_sales_7d = st.number_input(
+                "Our Sales (7d)", min_value=0,
+                value=int(stored['our_sales_7d']) if stored is not None else 0,
+                step=1, key=f"store_sales_7d_{store_product_id}",
+            )
+        with store_col2:
+            store_cost_price = st.text_input(
+                "Our Cost Price (تومان)", value=store_cost_default,
+                key=store_cost_key, on_change=normalize_price_input_state, args=(store_cost_key,),
+            )
+            show_price_input_feedback(store_cost_price)
+            store_sales_30d = st.number_input(
+                "Our Sales (30d)", min_value=0,
+                value=int(stored['our_sales_30d']) if stored is not None else 0,
+                step=1, key=f"store_sales_30d_{store_product_id}",
+            )
+            store_target_margin = st.number_input(
+                "Our Target Margin", min_value=0.0, max_value=1.0,
+                value=float(stored['our_target_margin']) if stored is not None else 0.30,
+                step=0.01, key=f"store_target_margin_{store_product_id}",
+            )
+
+        strategies = [
+            "trust_builder", "balanced", "profit_protection",
+            "market_penetration", "premium_positioning", "clearance_cashflow",
+        ]
+        stored_strategy = stored['our_strategy'] if stored is not None and stored['our_strategy'] in strategies else "balanced"
+        store_strategy = st.selectbox(
+            "Our Strategy",
+            options=strategies,
+            index=strategies.index(stored_strategy),
+            key=f"store_strategy_{store_product_id}",
+        )
+        if st.button("💾 Save Store Data", key="save_store_data"):
+            store_payload = {
+                'our_current_price': store_current_price,
+                'our_cost_price': store_cost_price,
+                'our_inventory': store_inventory,
+                'our_sales_7d': store_sales_7d,
+                'our_sales_30d': store_sales_30d,
+                'our_target_margin': store_target_margin,
+                'our_strategy': store_strategy,
+            }
+            is_valid, issues = validate_retailer_internal_payload(store_payload)
+            if not is_valid:
+                for issue in issues:
+                    st.error(issue)
+            else:
+                try:
+                    upsert_retailer_internal_data(
+                        'data/raw/retailer_internal_demo_template.csv',
+                        store_product_id,
+                        store_payload,
+                    )
+                    st.success("Store data updated successfully. Run Build Dataset to refresh recommendations.")
+                except ValueError as e:
+                    st.error(str(e))
+
+        st.markdown("---")
         
-        # Section 3: FX Rate Update
+        # Section 4: FX Rate Update
         st.markdown("### 💱 FX Rate Update")
         
         col1, col2 = st.columns(2)
@@ -1224,7 +1330,7 @@ def main():
         
         st.markdown("---")
         
-        # Section 4: Build Dataset
+        # Section 5: Build Dataset
         st.markdown("### 🔨 Build Processing Dataset")
         st.markdown(
             "After updating market prices and FX rates, rebuild the processed dataset "
