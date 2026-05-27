@@ -22,6 +22,12 @@ from src.utils.formatting import (
     format_million_toman,
     format_rial_equivalent,
     humanize_label,
+    safe_display,
+    format_optional_toman,
+    format_price_change,
+    format_price_change_percent,
+    format_action_badge,
+    format_risk_badge,
 )
 
 
@@ -270,6 +276,30 @@ class TestColorFunctions:
         """Test that invalid risk returns default color."""
         color = get_risk_color("invalid")
         assert "#" in color
+
+
+class TestRecommendationTableDisplay:
+    """Test safe human-readable formatting for the primary decision table."""
+
+    def test_safe_display_handles_none_and_nan(self):
+        assert safe_display(None) == "—"
+        assert safe_display(float("nan")) == "—"
+
+    def test_format_optional_toman_handles_nan(self):
+        assert format_optional_toman(float("nan")) == "—"
+
+    def test_format_price_change_positive_and_negative(self):
+        assert format_price_change(1000000, 1200000).startswith("+200,000")
+        assert format_price_change(1200000, 1000000).startswith("-200,000")
+
+    def test_format_price_change_percent(self):
+        assert format_price_change_percent(1000000, 1200000) == "+20.0%"
+
+    def test_format_action_badge(self):
+        assert format_action_badge("increase_price") == "📈 Increase Price"
+
+    def test_format_risk_badge(self):
+        assert format_risk_badge("medium") == "🟡 Medium"
 
 
 if __name__ == "__main__":

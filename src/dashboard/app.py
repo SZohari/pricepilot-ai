@@ -47,6 +47,13 @@ from src.utils.formatting import (
     format_price_input_value,
     parse_price_input,
     humanize_label,
+    safe_display,
+    format_optional_toman,
+    format_optional_percent,
+    format_price_change,
+    format_price_change_percent,
+    format_action_badge,
+    format_risk_badge,
 )
 from src.utils.validation import validate_csv_columns, validate_csv_data, get_column_info
 
@@ -214,6 +221,10 @@ def main():
         recommendations = []
         for _, row in df.iterrows():
             rec = recommend_price(row.to_dict(), usd_shock=shock, strategy=strategy_override)
+            rec["market_median_price"] = row.get(
+                "market_median_price",
+                row.get("competitor_median_price"),
+            )
             recommendations.append(rec)
         return pd.DataFrame(recommendations)
     
@@ -314,136 +325,25 @@ def main():
         st.subheader("Price Recommendations")
         st.markdown(f"Showing {len(filtered_recs)} of {len(recs_df)} products")
         
-        # Prepare display columns based on schema (Phase 2 or MVP)
-        if is_phase2:
-            # Phase 2 schema: show market-aware and strategy columns
-            display_fields = [
-                "product_name",
-                "brand",
-                "base_usd_price",
-                "usd_rate",
-                "theoretical_toman_price",
-                "iran_market_premium_pct",
-                "market_min_price",
-                "market_median_price",
-                "market_max_price",
-                "our_current_price",
-                "recommended_price",
-                "selected_strategy",
-                "action",
-                "risk_level",
-            ]
-        else:
-            # MVP schema: show traditional columns
-            display_fields = [
-                "product_id",
-                "product_name",
-                "brand",
-                "current_price",
-                "recommended_price",
-                "action",
-                "risk_level",
-                "current_margin",
-                "expected_margin",
-            ]
-        
-        # Ensure all display fields exist
-        for col in display_fields:
-            if col not in filtered_recs.columns:
-                if col in ["brand", "product_id", "product_name", "action", "risk_level", "selected_strategy"]:
-                    filtered_recs[col] = "Unknown"
-                elif col in ["base_usd_price", "usd_rate", "theoretical_toman_price", "iran_market_premium_pct", 
-                            "market_min_price", "market_median_price", "market_max_price", "our_current_price",
-                            "current_price", "recommended_price", "current_margin", "expected_margin"]:
-                    filtered_recs[col] = 0.0
-                else:
-                    filtered_recs[col] = None
-        
-        display_df = filtered_recs[display_fields].copy()
-        
-        # Format columns
-        if "base_usd_price" in display_df.columns:
-            display_df["Base USD Price"] = display_df["base_usd_price"].apply(
-                lambda x: f"${x:.2f}" if x and x > 0 else "N/A"
-            )
-        if "usd_rate" in display_df.columns:
-            display_df["USD Rate"] = display_df["usd_rate"].apply(
-                lambda x: f"{x:,.0f}" if x and x > 0 else "N/A"
-            )
-        if "theoretical_toman_price" in display_df.columns:
-            display_df["Theoretical Toman"] = display_df["theoretical_toman_price"].apply(
-                lambda x: format_toman(x) if x and x > 0 else "N/A"
-            )
-        if "iran_market_premium_pct" in display_df.columns:
-            display_df["Iran Premium %"] = display_df["iran_market_premium_pct"].apply(
-                lambda x: format_percent(x) if x is not None else "N/A"
-            )
-        if "market_min_price" in display_df.columns:
-            display_df["Market Min"] = display_df["market_min_price"].apply(
-                lambda x: format_toman(x) if x and x > 0 else "N/A"
-            )
-        if "market_median_price" in display_df.columns:
-            display_df["Market Median"] = display_df["market_median_price"].apply(
-                lambda x: format_toman(x) if x and x > 0 else "N/A"
-            )
-        if "market_max_price" in display_df.columns:
-            display_df["Market Max"] = display_df["market_max_price"].apply(
-                lambda x: format_toman(x) if x and x > 0 else "N/A"
-            )
-        if "our_current_price" in display_df.columns:
-            display_df["Our Current"] = display_df["our_current_price"].apply(
-                lambda x: format_toman(x) if x and x > 0 else "N/A"
-            )
-        if "current_price" in display_df.columns and "Our Current" not in display_df.columns:
-            display_df["Current Price"] = display_df["current_price"].apply(lambda x: format_toman(x))
-        if "recommended_price" in display_df.columns:
-            display_df["Recommended"] = display_df["recommended_price"].apply(lambda x: format_toman(x))
-        if "selected_strategy" in display_df.columns:
-            display_df["Strategy"] = display_df["selected_strategy"].apply(
-                lambda x: humanize_label(x) if x else "N/A"
-            )
-        if "action" in display_df.columns:
-            display_df["Action"] = display_df["action"].apply(format_action_label)
-        if "risk_level" in display_df.columns:
-            display_df["Risk"] = display_df["risk_level"].apply(format_risk_label)
-        if "current_margin" in display_df.columns:
-            display_df["Current Margin"] = display_df["current_margin"].apply(format_margin)
-        if "expected_margin" in display_df.columns:
-            display_df["Expected Margin"] = display_df["expected_margin"].apply(format_margin)
-        
-        # Select final display columns - avoid duplicates
-        if is_phase2:
-            display_cols_names = [
-                "product_name",
-                "brand",
-                "Base USD Price",
-                "Theoretical Toman",
-                "Iran Premium %",
-                "Market Median",
-                "Our Current",
-                "Recommended",
-                "Strategy",
-                "Action",
-                "Risk",
-            ]
-        else:
-            display_cols_names = [
-                "product_id",
-                "product_name",
-                "brand",
-                "Current Price",
-                "Recommended",
-                "Action",
-                "Risk",
-                "Current Margin",
-                "Expected Margin",
-            ]
-        
-        # Filter to only available columns
-        available_cols = [c for c in display_cols_names if c in display_df.columns]
-        display_cols = display_df[available_cols]
-        
-        st.dataframe(display_cols, use_container_width=True, hide_index=True)
+        display_rows = []
+        for _, recommendation in filtered_recs.iterrows():
+            current_price = recommendation.get("current_price")
+            recommended_price = recommendation.get("recommended_price")
+            display_rows.append({
+                "Product": safe_display(recommendation.get("product_name")),
+                "Brand": safe_display(recommendation.get("brand")),
+                "Our Current Price": format_optional_toman(current_price),
+                "Recommended Price": format_optional_toman(recommended_price),
+                "Price Change": format_price_change(current_price, recommended_price),
+                "Price Change %": format_price_change_percent(current_price, recommended_price),
+                "Strategy": safe_display(humanize_label(recommendation.get("selected_strategy"))),
+                "Action": format_action_badge(recommendation.get("action")),
+                "Risk": format_risk_badge(recommendation.get("risk_level")),
+                "Market Median": format_optional_toman(recommendation.get("market_median_price")),
+                "Iran Premium %": format_optional_percent(recommendation.get("iran_market_premium_pct")),
+            })
+
+        st.dataframe(pd.DataFrame(display_rows), use_container_width=True, hide_index=True)
     
     # Tab 2: Analytics
     with tab2:

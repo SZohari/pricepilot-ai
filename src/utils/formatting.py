@@ -1,5 +1,6 @@
 """Formatting utilities for readable display of prices and metrics."""
 
+import math
 from typing import Optional
 
 
@@ -370,6 +371,93 @@ def humanize_label(value: object) -> str:
         return explicit_labels[text]
 
     return text.replace("_", " ").replace("-", " ").title()
+
+
+def _valid_number(value: object) -> Optional[float]:
+    """Return a finite numeric value, or None for missing/invalid input."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
+def safe_display(value: object, fallback: str = "—") -> object:
+    """Return a visible fallback for empty or missing display values."""
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        return value.strip() or fallback
+    if _valid_number(value) is None:
+        return fallback
+    return value
+
+
+def format_optional_toman(value: object, fallback: str = "—") -> str:
+    """Format a finite toman value, or return a visible fallback."""
+    numeric = _valid_number(value)
+    if numeric is None:
+        return fallback
+    return format_toman(numeric)
+
+
+def format_optional_percent(value: object, fallback: str = "—") -> str:
+    """Format a finite decimal percentage, or return a visible fallback."""
+    numeric = _valid_number(value)
+    if numeric is None:
+        return fallback
+    return format_percent(numeric)
+
+
+def format_price_change(current_price: object, recommended_price: object, fallback: str = "—") -> str:
+    """Format the signed toman difference between current and recommended prices."""
+    current = _valid_number(current_price)
+    recommended = _valid_number(recommended_price)
+    if current is None or recommended is None:
+        return fallback
+    difference = recommended - current
+    sign = "+" if difference > 0 else ""
+    return f"{sign}{format_toman(difference)}"
+
+
+def format_price_change_percent(current_price: object, recommended_price: object, fallback: str = "—") -> str:
+    """Format the signed percentage price movement from the current price."""
+    current = _valid_number(current_price)
+    recommended = _valid_number(recommended_price)
+    if current is None or recommended is None or current == 0:
+        return fallback
+    movement = (recommended - current) / current * 100
+    return f"{movement:+.1f}%"
+
+
+def format_action_badge(action: object, fallback: str = "—") -> str:
+    """Format an internal action label for concise table display."""
+    action_text = safe_display(action, fallback)
+    if action_text == fallback:
+        return fallback
+    labels = {
+        "increase_price": "📈 Increase Price",
+        "decrease_price": "📉 Decrease Price",
+        "hold_price": "⏸ Hold Price",
+        "urgent_review": "⚠️ Urgent Review",
+    }
+    return labels.get(str(action_text), humanize_label(action_text))
+
+
+def format_risk_badge(risk: object, fallback: str = "—") -> str:
+    """Format an internal risk label for concise table display."""
+    risk_text = safe_display(risk, fallback)
+    if risk_text == fallback:
+        return fallback
+    labels = {
+        "low": "🟢 Low",
+        "medium": "🟡 Medium",
+        "high": "🟠 High",
+        "critical": "🔴 Critical",
+    }
+    return labels.get(str(risk_text), humanize_label(risk_text))
 def humanize_label(value: object) -> str:
     """Convert internal snake_case labels into clean user-facing labels."""
     if value is None:
