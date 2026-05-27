@@ -26,7 +26,8 @@ def format_toman(value: float, compact: bool = False) -> str:
     if compact:
         if abs(value) >= 1_000_000:
             millions = value / 1_000_000
-            return f"{millions:.1f} میلیون تومان"
+            formatted_millions = f"{millions:.1f}".rstrip("0").rstrip(".")
+            return f"{formatted_millions} میلیون تومان"
         elif abs(value) >= 1_000:
             thousands = value / 1_000
             return f"{thousands:.0f} هزار تومان"
@@ -84,6 +85,14 @@ def parse_price_input(value) -> Optional[int]:
         return None
 
 
+def format_price_input_value(value: object) -> str:
+    """Format a valid user-entered price for display inside a text input."""
+    parsed = parse_price_input(value)
+    if parsed is None:
+        return ""
+    return f"{parsed:,}"
+
+
 def format_million_toman(value) -> str:
     """
     Format a toman amount with both full and compact million display.
@@ -104,6 +113,14 @@ def format_million_toman(value) -> str:
     return f"{format_toman(value_int)} | {format_toman(value_int, compact=True)}"
 
 
+def format_rial_equivalent(value) -> str:
+    """Format the rial equivalent of a numeric toman amount."""
+    if not isinstance(value, (int, float)):
+        return "معادل 0 ریال"
+
+    return f"معادل {int(value) * 10:,} ریال"
+
+
 def format_price_preview(value) -> str:
     """
     Create a compact price preview string for display next to inputs.
@@ -117,7 +134,7 @@ def format_price_preview(value) -> str:
     parsed = parse_price_input(value)
     if parsed is None or parsed <= 0:
         return ""
-    return format_million_toman(parsed)
+    return f"{format_million_toman(parsed)} | {format_rial_equivalent(parsed)}"
 
 
 def humanize_label(value: str) -> str:

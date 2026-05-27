@@ -36,6 +36,7 @@ from src.utils.formatting import (
     get_risk_color,
     get_action_color,
     format_price_preview,
+    format_price_input_value,
     parse_price_input,
     humanize_label,
 )
@@ -51,6 +52,28 @@ def is_valid_source_link(link: str) -> bool:
     if normalized.lower() in {"#", "n/a", "na", "none"}:
         return False
     return True
+
+
+def normalize_price_input_state(key: str) -> None:
+    """Normalize a valid text price field to grouped English digits."""
+    raw_value = st.session_state.get(key, "")
+    parsed_value = parse_price_input(raw_value)
+    if parsed_value is not None:
+        st.session_state[key] = format_price_input_value(parsed_value)
+
+
+def show_price_input_feedback(value: str) -> None:
+    """Show immediate validation and readability feedback for a toman input."""
+    parsed_value = parse_price_input(value)
+    if value.strip() and parsed_value is None:
+        st.warning("Please enter a valid number.")
+        return
+
+    preview = format_price_preview(parsed_value)
+    if preview:
+        st.markdown(f'<div dir="ltr"><code>{preview}</code></div>', unsafe_allow_html=True)
+    if parsed_value is not None and parsed_value >= 100_000_000:
+        st.warning("این عدد خیلی بزرگ است. مطمئن هستید قیمت را به تومان وارد کرده‌اید نه ریال؟")
 
 
 def load_data_with_mode():
@@ -964,24 +987,28 @@ def main():
         
         col1, col2 = st.columns(2)
         with col1:
-            torob_min = st.text_input("Torob Min Price (تومان)", value="", placeholder="e.g. 37,200,000", key="torob_min")
-            torob_min_preview = format_price_preview(torob_min)
-            if torob_min_preview:
-                st.caption(f"Preview: {torob_min_preview}")
-            torob_median = st.text_input("Torob Median Price (تومان)", value="", placeholder="e.g. 37,200,000", key="torob_median")
-            torob_median_preview = format_price_preview(torob_median)
-            if torob_median_preview:
-                st.caption(f"Preview: {torob_median_preview}")
+            torob_min = st.text_input(
+                "Torob Min Price (تومان)", value="", placeholder="e.g. 37,200,000",
+                key="torob_min_price", on_change=normalize_price_input_state, args=("torob_min_price",),
+            )
+            show_price_input_feedback(torob_min)
+            torob_median = st.text_input(
+                "Torob Median Price (تومان)", value="", placeholder="e.g. 37,200,000",
+                key="torob_median_price", on_change=normalize_price_input_state, args=("torob_median_price",),
+            )
+            show_price_input_feedback(torob_median)
         
         with col2:
-            digikala_price = st.text_input("Digikala Price (تومان)", value="", placeholder="e.g. 38,000,000", key="digikala")
-            digikala_price_preview = format_price_preview(digikala_price)
-            if digikala_price_preview:
-                st.caption(f"Preview: {digikala_price_preview}")
-            market_max = st.text_input("Market Max Price (تومان)", value="", placeholder="e.g. 40,000,000", key="market_max")
-            market_max_preview = format_price_preview(market_max)
-            if market_max_preview:
-                st.caption(f"Preview: {market_max_preview}")
+            digikala_price = st.text_input(
+                "Digikala Price (تومان)", value="", placeholder="e.g. 38,000,000",
+                key="digikala_price", on_change=normalize_price_input_state, args=("digikala_price",),
+            )
+            show_price_input_feedback(digikala_price)
+            market_max = st.text_input(
+                "Market Max Price (تومان)", value="", placeholder="e.g. 40,000,000",
+                key="market_max_price", on_change=normalize_price_input_state, args=("market_max_price",),
+            )
+            show_price_input_feedback(market_max)
         
         availability_options = {
             'Available': 'available',
@@ -1055,10 +1082,11 @@ def main():
         with col2:
             fx_symbol = st.text_input("Symbol", value="USDIRT", key="fx_symbol")
         
-        fx_rate = st.text_input("Rate (Toman per Unit)", value="45,000", placeholder="e.g. 45,000", key="fx_rate")
-        fx_rate_preview = format_price_preview(fx_rate)
-        if fx_rate_preview:
-            st.caption(f"Preview: {fx_rate_preview}")
+        fx_rate = st.text_input(
+            "Rate (Toman per Unit)", value="45,000", placeholder="e.g. 45,000",
+            key="fx_rate_toman", on_change=normalize_price_input_state, args=("fx_rate_toman",),
+        )
+        show_price_input_feedback(fx_rate)
         fx_notes = st.text_area("Notes (e.g., source URL, timestamp)", placeholder="e.g., from Nobitex at 14:30", key="fx_notes")
         
         if st.button("💾 Save FX Rate", key="save_fx"):

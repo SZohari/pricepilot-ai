@@ -17,8 +17,10 @@ from src.utils.formatting import (
     get_risk_color,
     get_action_color,
     parse_price_input,
+    format_price_input_value,
     format_price_preview,
     format_million_toman,
+    format_rial_equivalent,
     humanize_label,
 )
 
@@ -154,9 +156,13 @@ class TestFormatPriceComparison:
 class TestParsePriceInput:
     """Test parsing of numeric price strings."""
 
+    def test_parse_price_input_english_digits(self):
+        result = parse_price_input("370000000")
+        assert result == 370000000
+
     def test_parse_price_input_with_commas(self):
-        result = parse_price_input("37,200,000")
-        assert result == 37200000
+        result = parse_price_input("370,000,000")
+        assert result == 370000000
 
     def test_parse_price_input_with_spaces(self):
         result = parse_price_input(" 38 000 000 ")
@@ -167,8 +173,12 @@ class TestParsePriceInput:
         assert result == 12500000
 
     def test_parse_price_input_persian_digits_with_commas(self):
-        result = parse_price_input("۱۲,۵۰۰,۰۰۰")
-        assert result == 12500000
+        result = parse_price_input("۳۷۰,۰۰۰,۰۰۰")
+        assert result == 370000000
+
+    def test_parse_price_input_persian_comma(self):
+        result = parse_price_input("۳۷۰،۰۰۰،۰۰۰")
+        assert result == 370000000
 
     def test_parse_price_input_arabic_digits(self):
         result = parse_price_input("١٢٥٠٠٠٠٠")
@@ -183,14 +193,31 @@ class TestFormatPricePreview:
     """Test compact price preview formatting."""
 
     def test_format_price_preview_numeric(self):
-        result = format_price_preview(37200000)
-        assert "میلیون" in result
-        assert "37.2" in result
-        assert "12,500,000" not in result or "12,500,000 تومان" in result
+        result = format_price_preview(370000000)
+        assert "370,000,000 تومان" in result
+        assert "370 میلیون تومان" in result
+        assert "معادل 3,700,000,000 ریال" in result
 
     def test_format_price_preview_invalid_returns_empty(self):
         result = format_price_preview("invalid")
         assert result == ""
+
+
+class TestFormatPriceInputValue:
+    """Test normalized text input formatting."""
+
+    def test_numeric_value(self):
+        assert format_price_input_value(370000000) == "370,000,000"
+
+    def test_english_string_value(self):
+        assert format_price_input_value("370000000") == "370,000,000"
+
+    def test_persian_string_value(self):
+        assert format_price_input_value("۳۷۰۰۰۰۰۰۰") == "370,000,000"
+
+    def test_empty_or_invalid_value(self):
+        assert format_price_input_value("") == ""
+        assert format_price_input_value("invalid") == ""
 
 
 class TestFormatMillionToman:
@@ -200,6 +227,13 @@ class TestFormatMillionToman:
         result = format_million_toman(12500000)
         assert "12,500,000 تومان" in result
         assert "12.5 میلیون تومان" in result
+
+
+class TestFormatRialEquivalent:
+    """Test toman-to-rial display formatting."""
+
+    def test_format_rial_equivalent(self):
+        assert format_rial_equivalent(370000000) == "معادل 3,700,000,000 ریال"
 
 
 class TestHumanizeLabel:
