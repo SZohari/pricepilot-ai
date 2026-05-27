@@ -16,6 +16,10 @@ from src.utils.formatting import (
     format_price_comparison,
     get_risk_color,
     get_action_color,
+    parse_price_input,
+    format_price_preview,
+    format_million_toman,
+    humanize_label,
 )
 
 
@@ -145,6 +149,74 @@ class TestFormatPriceComparison:
         result = format_price_comparison(1000000, 1200000)
         assert "1,000,000" in result
         assert "1,200,000" in result
+
+
+class TestParsePriceInput:
+    """Test parsing of numeric price strings."""
+
+    def test_parse_price_input_with_commas(self):
+        result = parse_price_input("37,200,000")
+        assert result == 37200000
+
+    def test_parse_price_input_with_spaces(self):
+        result = parse_price_input(" 38 000 000 ")
+        assert result == 38000000
+
+    def test_parse_price_input_persian_digits(self):
+        result = parse_price_input("۱۲۵۰۰۰۰۰")
+        assert result == 12500000
+
+    def test_parse_price_input_persian_digits_with_commas(self):
+        result = parse_price_input("۱۲,۵۰۰,۰۰۰")
+        assert result == 12500000
+
+    def test_parse_price_input_arabic_digits(self):
+        result = parse_price_input("١٢٥٠٠٠٠٠")
+        assert result == 12500000
+
+    def test_parse_price_input_invalid(self):
+        result = parse_price_input("invalid")
+        assert result is None
+
+
+class TestFormatPricePreview:
+    """Test compact price preview formatting."""
+
+    def test_format_price_preview_numeric(self):
+        result = format_price_preview(37200000)
+        assert "میلیون" in result
+        assert "37.2" in result
+        assert "12,500,000" not in result or "12,500,000 تومان" in result
+
+    def test_format_price_preview_invalid_returns_empty(self):
+        result = format_price_preview("invalid")
+        assert result == ""
+
+
+class TestFormatMillionToman:
+    """Test full and compact million formatting."""
+
+    def test_format_million_toman(self):
+        result = format_million_toman(12500000)
+        assert "12,500,000 تومان" in result
+        assert "12.5 میلیون تومان" in result
+
+
+class TestHumanizeLabel:
+    """Test conversion from snake_case to readable labels."""
+
+    def test_humanize_strategy_label(self):
+        assert humanize_label("trust_builder") == "Trust Builder"
+        assert humanize_label("profit_protection") == "Profit Protection"
+        assert humanize_label("clearance_cashflow") == "Clearance / Cashflow"
+
+    def test_humanize_action_label(self):
+        assert humanize_label("increase_price") == "Increase Price"
+        assert humanize_label("decrease_price") == "Decrease Price"
+        assert humanize_label("urgent_review") == "Urgent Review"
+        assert humanize_label("available") == "Available"
+        assert humanize_label("low_stock") == "Low Stock"
+        assert humanize_label("unavailable") == "Unavailable"
 
 
 class TestColorFunctions:

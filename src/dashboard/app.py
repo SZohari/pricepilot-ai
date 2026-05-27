@@ -35,8 +35,22 @@ from src.utils.formatting import (
     format_price_comparison,
     get_risk_color,
     get_action_color,
+    format_price_preview,
+    parse_price_input,
+    humanize_label,
 )
 from src.utils.validation import validate_csv_columns, validate_csv_data, get_column_info
+
+
+def is_valid_source_link(link: str) -> bool:
+    if not link:
+        return False
+    normalized = str(link).strip()
+    if normalized == "":
+        return False
+    if normalized.lower() in {"#", "n/a", "na", "none"}:
+        return False
+    return True
 
 
 def load_data_with_mode():
@@ -132,19 +146,23 @@ def main():
     is_phase2 = "our_current_price" in df.columns
     if is_phase2:
         st.sidebar.subheader("🎯 Pricing Strategy")
-        selected_strategy = st.sidebar.selectbox(
+        strategy_label_map = {
+            "trust_builder": "Trust Builder",
+            "balanced": "Balanced",
+            "profit_protection": "Profit Protection",
+            "market_penetration": "Market Penetration",
+            "premium_positioning": "Premium Positioning",
+            "clearance_cashflow": "Clearance / Cashflow",
+        }
+        selected_strategy_label = st.sidebar.selectbox(
             "Strategy",
-            options=[
-                "trust_builder",
-                "balanced",
-                "profit_protection",
-                "market_penetration",
-                "premium_positioning",
-                "clearance_cashflow",
-            ],
-            index=1,  # Default to "balanced"
+            options=list(strategy_label_map.values()),
+            index=1,  # Default to "Balanced"
             help="Select pricing strategy for Phase 2 recommendations",
         )
+        selected_strategy = {
+            label: key for key, label in strategy_label_map.items()
+        }[selected_strategy_label]
     else:
         selected_strategy = None
     
@@ -215,17 +233,35 @@ def main():
     else:
         selected_brands = None
     
-    selected_actions = st.sidebar.multiselect(
+    action_label_map = {
+        "increase_price": "Increase Price",
+        "decrease_price": "Decrease Price",
+        "hold_price": "Hold Price",
+        "urgent_review": "Urgent Review",
+    }
+    selected_action_labels = st.sidebar.multiselect(
         "Action",
-        options=["increase_price", "decrease_price", "hold_price", "urgent_review"],
-        default=["increase_price", "decrease_price", "hold_price", "urgent_review"],
+        options=list(action_label_map.values()),
+        default=list(action_label_map.values()),
     )
+    selected_actions = [
+        key for key, label in action_label_map.items() if label in selected_action_labels
+    ]
     
-    selected_risk_levels = st.sidebar.multiselect(
+    risk_label_map = {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical",
+    }
+    selected_risk_labels = st.sidebar.multiselect(
         "Risk Level",
-        options=["low", "medium", "high", "critical"],
-        default=["low", "medium", "high", "critical"],
+        options=list(risk_label_map.values()),
+        default=list(risk_label_map.values()),
     )
+    selected_risk_levels = [
+        key for key, label in risk_label_map.items() if label in selected_risk_labels
+    ]
     
     # Apply filters robustly
     filtered_recs = recs_df.copy()
@@ -333,7 +369,7 @@ def main():
             display_df["Recommended"] = display_df["recommended_price"].apply(lambda x: format_toman(x))
         if "selected_strategy" in display_df.columns:
             display_df["Strategy"] = display_df["selected_strategy"].apply(
-                lambda x: x.replace("_", " ").title() if x else "N/A"
+                lambda x: humanize_label(x) if x else "N/A"
             )
         if "action" in display_df.columns:
             display_df["Action"] = display_df["action"].apply(format_action_label)
@@ -387,7 +423,7 @@ def main():
             action_counts = filtered_recs["action"].value_counts()
             fig_actions = px.pie(
     values=action_counts.values,
-    names=action_counts.index,
+    names=[humanize_label(name) for name in action_counts.index],
     title="📈 Price Actions Distribution",
     color_discrete_map={
         "increase_price": "#90EE90",
@@ -403,7 +439,7 @@ def main():
             risk_counts = filtered_recs["risk_level"].value_counts()
             fig_risk = px.pie(
     values=risk_counts.values,
-    names=risk_counts.index,
+    names=[humanize_label(name) for name in risk_counts.index],
     title="⚠️ Risk Level Distribution",
     color_discrete_map={
         "low": "#00CC00",
@@ -826,7 +862,7 @@ def main():
             st.markdown("**Triggered Rules:**")
             if product_rec.get("triggered_rules"):
                 for rule in product_rec["triggered_rules"]:
-                    st.write(f"• {rule.replace('_', ' ').title()}")
+                    st.write(f"• {humanize_label(rule)}")
             else:
                 st.write("No specific rules triggered.")
             
@@ -895,61 +931,112 @@ def main():
         product_row = products_df[products_df['product_id'] == selected_product_id].iloc[0]
         
         st.markdown(f"**Product:** {product_row['brand']} {product_row['model']}")
-        st.markdown(f"**Priority:** {product_row.get('priority', 'unknown')}")
+        priority_label = {
+            'high': '🔥 High Priority',
+            'medium': '⚡ Medium Priority',
+            'low': 'ℹ️ Low Priority',
+        }.get(str(product_row.get('priority', '')).lower(), str(product_row.get('priority', 'Unknown')).title())
+        st.markdown(f"**Priority:** {priority_label}")
         
         # Show source links
         sources_cols = st.columns(3)
-        if product_row.get('torob_url'):
-            with sources_cols[0]:
+        with sources_cols[0]:
+            if is_valid_source_link(product_row.get('torob_url')):
                 st.markdown(f"[🔗 Torob]({product_row['torob_url']})")
-        if product_row.get('digikala_url'):
-            with sources_cols[1]:
+            else:
+                st.markdown("_Link not added yet_")
+        with sources_cols[1]:
+            if is_valid_source_link(product_row.get('digikala_url')):
                 st.markdown(f"[🔗 Digikala]({product_row['digikala_url']})")
-        if product_row.get('global_reference_url'):
-            with sources_cols[2]:
+            else:
+                st.markdown("_Link not added yet_")
+        with sources_cols[2]:
+            if is_valid_source_link(product_row.get('global_reference_url')):
                 st.markdown(f"[🔗 Global Ref]({product_row['global_reference_url']})")
+            else:
+                st.markdown("_Link not added yet_")
         
         st.markdown("---")
         
         # Price input fields
         st.markdown("**Enter Market Prices (at least one required):**")
+        st.markdown("_Compact price preview is shown below each input to help readability._")
         
         col1, col2 = st.columns(2)
         with col1:
-            torob_min = st.number_input("Torob Min Price (تومان)", min_value=0, value=0, step=100000, key="torob_min")
-            torob_median = st.number_input("Torob Median Price (تومان)", min_value=0, value=0, step=100000, key="torob_median")
+            torob_min = st.text_input("Torob Min Price (تومان)", value="", placeholder="e.g. 37,200,000", key="torob_min")
+            torob_min_preview = format_price_preview(torob_min)
+            if torob_min_preview:
+                st.caption(f"Preview: {torob_min_preview}")
+            torob_median = st.text_input("Torob Median Price (تومان)", value="", placeholder="e.g. 37,200,000", key="torob_median")
+            torob_median_preview = format_price_preview(torob_median)
+            if torob_median_preview:
+                st.caption(f"Preview: {torob_median_preview}")
         
         with col2:
-            digikala_price = st.number_input("Digikala Price (تومان)", min_value=0, value=0, step=100000, key="digikala")
-            market_max = st.number_input("Market Max Price (تومان)", min_value=0, value=0, step=100000, key="market_max")
+            digikala_price = st.text_input("Digikala Price (تومان)", value="", placeholder="e.g. 38,000,000", key="digikala")
+            digikala_price_preview = format_price_preview(digikala_price)
+            if digikala_price_preview:
+                st.caption(f"Preview: {digikala_price_preview}")
+            market_max = st.text_input("Market Max Price (تومان)", value="", placeholder="e.g. 40,000,000", key="market_max")
+            market_max_preview = format_price_preview(market_max)
+            if market_max_preview:
+                st.caption(f"Preview: {market_max_preview}")
         
-        availability = st.selectbox(
+        availability_options = {
+            'Available': 'available',
+            'Low Stock': 'low_stock',
+            'Unavailable': 'unavailable',
+        }
+        availability_label = st.selectbox(
             "Availability Status",
-            options=["available", "low_stock", "unavailable"],
+            options=list(availability_options.keys()),
             key="availability"
         )
+        availability = availability_options[availability_label]
         
         notes = st.text_area("Notes", placeholder="e.g., price checked at 14:30", key="market_notes")
         
         # Save button
         if st.button("💾 Save Market Update", key="save_market"):
-            update_dict = {
-                'product_id': selected_product_id,
-                'observed_at': datetime.now().isoformat(),
-                'torob_min_price': torob_min if torob_min > 0 else None,
-                'torob_median_price': torob_median if torob_median > 0 else None,
-                'digikala_price': digikala_price if digikala_price > 0 else None,
-                'market_max_price': market_max if market_max > 0 else None,
-                'availability_note': availability,
-                'notes': notes,
-            }
-            
-            try:
-                append_daily_market_update('data/raw/daily_market_updates.csv', update_dict)
-                st.success(f"✅ Market update saved for {product_row['product_name']}!")
-                st.rerun()
-            except ValueError as e:
-                st.error(f"❌ Validation error: {str(e)}")
+            parsed_torob_min = parse_price_input(torob_min)
+            parsed_torob_median = parse_price_input(torob_median)
+            parsed_digikala = parse_price_input(digikala_price)
+            parsed_market_max = parse_price_input(market_max)
+
+            invalid_fields = []
+            if torob_min and parsed_torob_min is None:
+                invalid_fields.append("Torob Min Price")
+            if torob_median and parsed_torob_median is None:
+                invalid_fields.append("Torob Median Price")
+            if digikala_price and parsed_digikala is None:
+                invalid_fields.append("Digikala Price")
+            if market_max and parsed_market_max is None:
+                invalid_fields.append("Market Max Price")
+
+            if invalid_fields:
+                st.error(
+                    f"❌ Invalid price values in: {', '.join(invalid_fields)}."
+                    " Please enter numbers using digits, commas, or spaces."
+                )
+            else:
+                update_dict = {
+                    'product_id': selected_product_id,
+                    'observed_at': datetime.now().isoformat(),
+                    'torob_min_price': parsed_torob_min,
+                    'torob_median_price': parsed_torob_median,
+                    'digikala_price': parsed_digikala,
+                    'market_max_price': parsed_market_max,
+                    'availability_note': availability,
+                    'notes': notes,
+                }
+
+                try:
+                    append_daily_market_update('data/raw/daily_market_updates.csv', update_dict)
+                    st.success(f"✅ Market update saved for {product_row['product_name']}!")
+                    st.rerun()
+                except ValueError as e:
+                    st.error(f"❌ Validation error: {str(e)}")
         
         st.markdown("---")
         
@@ -968,17 +1055,24 @@ def main():
         with col2:
             fx_symbol = st.text_input("Symbol", value="USDIRT", key="fx_symbol")
         
-        fx_rate = st.number_input("Rate (Toman per Unit)", min_value=1.0, value=45000.0, step=100.0, key="fx_rate")
+        fx_rate = st.text_input("Rate (Toman per Unit)", value="45,000", placeholder="e.g. 45,000", key="fx_rate")
+        fx_rate_preview = format_price_preview(fx_rate)
+        if fx_rate_preview:
+            st.caption(f"Preview: {fx_rate_preview}")
         fx_notes = st.text_area("Notes (e.g., source URL, timestamp)", placeholder="e.g., from Nobitex at 14:30", key="fx_notes")
         
         if st.button("💾 Save FX Rate", key="save_fx"):
-            fx_dict = {
-                'source': fx_source,
-                'symbol': fx_symbol,
-                'rate_toman': fx_rate,
-                'observed_at': datetime.now().isoformat(),
-                'notes': fx_notes,
-            }
+            parsed_fx_rate = parse_price_input(fx_rate)
+            if parsed_fx_rate is None or parsed_fx_rate <= 0:
+                st.error("❌ Please enter a valid FX rate in Toman using digits, commas, or spaces.")
+            else:
+                fx_dict = {
+                    'source': fx_source,
+                    'symbol': fx_symbol,
+                    'rate_toman': parsed_fx_rate,
+                    'observed_at': datetime.now().isoformat(),
+                    'notes': fx_notes,
+                }
             
             try:
                 append_fx_rate_snapshot('data/raw/fx_rate_snapshots.csv', fx_dict)

@@ -1,11 +1,11 @@
 product_id,brand,model,product_name,product_query,torob_url,digikala_url,global_reference_url,priority,active,notes
-APUL-GPS-1,Apple,Watch Ultra GPS,Apple Watch Ultra GPS,Apple Watch Ultra GPS,torob.com/p/apple-watch-ultra-gps,digikala.com/product/apple-watch-ultra,apple.com/watch,high,true,Premium smartwatch with GPS and cellular
-GAML-SE-1,Samsung,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,torob.com/p/samsung-galaxy-watch-6,digikala.com/product/samsung-galaxy-watch-6,samsung.com/smartwatches,high,true,Classic design with rotating bezel
-FITB-CHG-1,Fitbit,Charge 6,Fitbit Charge 6,Fitbit Charge 6,torob.com/p/fitbit-charge-6,digikala.com/product/fitbit-charge-6,fitbit.com,medium,true,Fitness tracker with health monitoring
-HWAT-GTA-1,Huawei,Watch GT4,Huawei Watch GT4,Huawei Watch GT4,torob.com/p/huawei-watch-gt4,digikala.com/product/huawei-watch-gt4,huawei.com/smartwatch,medium,true,Long battery life wearable
-XIAO-MI-1,Xiaomi,Band 8 Pro,Xiaomi Band 8 Pro,Xiaomi Band 8 Pro,torob.com/p/xiaomi-band-8-pro,digikala.com/product/xiaomi-band-8-pro,xiaomi.com/global,low,true,Budget-friendly fitness tracker
-GARM-PHX-1,Garmin,Phenix Plus,Garmin Epix Gen 2,Garmin Epix Gen 2,torob.com/p/garmin-epix-gen-2,digikala.com/product/garmin-epix,garmin.com,high,true,Outdoor adventure GPS watch
-POLA-SEN-1,Polar,Sense Gen 2,Polar Sense 2,Polar Sense 2,torob.com/p/polar-sense-2,digikala.com/product/polar-sense-2,polar.com,medium,true,Sports watch with ECG and training
-SUUN-4UT-1,Suunto,4 Ultra,Suunto 4 Ultra,Suunto 4 Ultra,torob.com/p/suunto-4-ultra,digikala.com/product/suunto-4-ultra,suunto.com,medium,true,Durable outdoor sports watch
-MOBV-GB-1,Mobvoi,TicWatch Pro 5,Mobvoi TicWatch Pro 5,Mobvoi TicWatch Pro 5,torob.com/p/ticwatch-pro-5,digikala.com/product/ticwatch-pro-5,mobvoi.com,low,true,Android wear smartwatch
-SKGE-FMX-1,Skagen,Falster Max,Skagen Falster Max,Skagen Falster Max,torob.com/p/skagen-falster-max,digikala.com/product/skagen-falster-max,skagen.com,low,true,Premium hybrid smartwatch
+APUL-GPS-1,Apple,Watch Ultra 2,Apple Watch Ultra 2,Apple Watch Ultra 2,,,,high,true,High-end outdoor smartwatch
+GAML-SE-1,Samsung,Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,Samsung Galaxy Watch 6 Classic,,,,high,true,Classic rotating bezel smartwatch
+FITB-CHG-1,Fitbit,Charge 6,Fitbit Charge 6,Fitbit Charge 6,,,,medium,true,Advanced fitness tracker
+HWAT-GTA-1,Huawei,Watch GT 4,Huawei Watch GT 4,Huawei Watch GT 4,,,,medium,true,Long battery life wearable
+XIAO-MI-1,Xiaomi,Watch S3,Xiaomi Watch S3,Xiaomi Watch S3,,,,low,true,Premium mid-range smartwatch
+GARM-PHX-1,Amazfit,GTR 4,Amazfit GTR 4,Amazfit GTR 4,,,,high,true,Multi-sport GPS smartwatch
+POLA-SEN-1,Haylou,RS4 Plus,Haylou RS4 Plus,Haylou RS4 Plus,,,,medium,true,Sleek budget smartwatch
+SUUN-4UT-1,Samsung,Galaxy Watch 7,Samsung Galaxy Watch 7,Samsung Galaxy Watch 7,,,,medium,true,Next-gen Samsung wearable
+MOBV-GB-1,Xiaomi,Redmi Watch 4,Redmi Watch 4,Redmi Watch 4,,,,low,true,Affordable everyday smartwatch
+SKGE-FMX-1,Apple,Watch SE 2,Apple Watch SE 2,Apple Watch SE 2,,,,low,true,Value-focused Apple wearable
