@@ -21,6 +21,7 @@ This project is intentionally human-in-the-loop: it assists pricing decisions, b
 - Add New Product workflow for maintaining product, store, and global reference records
 - Our Store Data workflow for updating current price, cost, inventory, sales, margin, and selected strategy
 - Processed Real Market Dataset mode backed by a reproducible CSV build pipeline
+- Lightweight FastAPI backend for recommendations, product lookup, and dataset builds
 - Defensive validation and automated test coverage for the data and recommendation workflow
 
 ## Architecture
@@ -42,9 +43,9 @@ data/processed/dashboard_pricing_data.csv
           |
           v
 src/pricing/ (recommendation, strategy, and risk modules)
-          |
-          v
-src/dashboard/app.py
+          |                         |
+          v                         v
+src/dashboard/app.py          src/api/main.py
 ```
 
 Key modules:
@@ -57,6 +58,7 @@ Key modules:
 | `src/data/market_aggregation.py` | Aggregates public market observations |
 | `src/pricing/strategies.py` | Produces strategy-specific price candidates |
 | `src/pricing/recommendation.py` | Combines price, action, risk, and explanation output |
+| `src/api/main.py` | Thin FastAPI interface over dataset builds and recommendations |
 
 ## Pricing Strategies
 
@@ -83,6 +85,24 @@ python -m venv .venv
 ```
 
 Open `http://localhost:8501` and select either sample data or **Processed Real Market Dataset** in the sidebar.
+
+## FastAPI Backend
+
+The Streamlit dashboard remains the user interface. A lightweight FastAPI service exposes the same existing dataset and recommendation functions for integration demos:
+
+- `GET /health` checks service availability.
+- `GET /products` returns product metadata from the processed dataset.
+- `POST /recommend-price` evaluates one product payload.
+- `POST /recommendations/batch` evaluates every processed dataset row.
+- `POST /build-dataset` runs the existing processed dataset build workflow.
+
+Run the API from the project root:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn src.api.main:app --reload
+```
+
+Interactive API documentation is available at `http://127.0.0.1:8000/docs`.
 
 ## Data Workflow
 
@@ -140,7 +160,6 @@ The automated tests cover formatting and Persian-digit inputs, market and FX per
 - Move raw CSV persistence to a database with audit history
 - Integrate a reliable live FX API
 - Add compliant, source-approved market data collectors
-- Expose core workflows through FastAPI
 - Package reproducible deployment with Docker
 - Explore ML forecasting once enough trustworthy historical observations exist
 
