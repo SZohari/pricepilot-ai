@@ -1,290 +1,149 @@
-# Inflation-Aware Pricing Intelligence System
+# PricePilot AI
 
-A lightweight MVP dashboard for pricing smartwatches in volatile retail markets (Iran).
+PricePilot AI is an explainable pricing decision-support dashboard for a smartwatch and wearable retailer operating in Iran's volatile retail market. It combines public market observations, internal store data, global USD price references, and exchange-rate snapshots to help a seller review competitive positioning and choose a pricing strategy.
 
-## Phase 2 Design
+This project is intentionally human-in-the-loop: it assists pricing decisions, but does not automatically change store prices.
 
-See [docs/PHASE_2_DESIGN.md](docs/PHASE_2_DESIGN.md) for the next version design and project direction.
+## Portfolio Links
+
+- [Case Study](docs/CASE_STUDY.md)
+- [Screenshot Guide](docs/SCREENSHOT_GUIDE.md)
+- [Phase 2 Design](docs/PHASE_2_DESIGN.md)
+- [Real Data Plan](docs/PHASE_3_REAL_DATA_PLAN.md)
 
 ## Features
 
-- **Rule-based pricing recommendations** with explainable logic
-- **Risk scoring** for high-volatility products
-- **Scenario simulator** to test USD exchange rate shocks
-- **Interactive dashboard** with KPIs, filters, and charts
-- **Sample data generator** for testing and demo
+- Streamlit dashboard with recommendations, analytics, product detail views, and USD shock simulation
+- Six explainable pricing strategies for different retail goals
+- Readable Iranian toman entry with comma normalization, million-toman preview, and rial equivalent
+- Market Update Console for manually recording daily competitor prices
+- FX snapshot entry that recalculates theoretical toman prices after rebuilding
+- Add New Product workflow for maintaining product, store, and global reference records
+- Our Store Data workflow for updating current price, cost, inventory, sales, margin, and selected strategy
+- Processed Real Market Dataset mode backed by a reproducible CSV build pipeline
+- Defensive validation and automated test coverage for the data and recommendation workflow
 
-## Quick Start (Windows PowerShell)
+## Architecture
 
-### 1. Create and activate virtual environment
+```text
+data/raw/
+  products_master.csv
+  market_observations_template.csv
+  daily_market_updates.csv
+  retailer_internal_demo_template.csv
+  global_usd_reference_template.csv
+  fx_rate_snapshots.csv
+          |
+          v
+src/data/build_pricing_dataset.py
+          |
+          v
+data/processed/dashboard_pricing_data.csv
+          |
+          v
+src/pricing/ (recommendation, strategy, and risk modules)
+          |
+          v
+src/dashboard/app.py
+```
+
+Key modules:
+
+| Path | Purpose |
+| --- | --- |
+| `src/dashboard/app.py` | Streamlit experience and assisted update forms |
+| `src/data/manual_entry.py` | Validated product, store, market, and FX persistence helpers |
+| `src/data/build_pricing_dataset.py` | Builds dashboard-ready product records |
+| `src/data/market_aggregation.py` | Aggregates public market observations |
+| `src/pricing/strategies.py` | Produces strategy-specific price candidates |
+| `src/pricing/recommendation.py` | Combines price, action, risk, and explanation output |
+
+## Pricing Strategies
+
+| Strategy | Intent |
+| --- | --- |
+| Trust Builder | Stay close to the low end of the market to build confidence and volume |
+| Balanced | Price near the market median while protecting margin |
+| Profit Protection | Favor margin preservation and theoretical replacement-cost signals |
+| Market Penetration | Compete aggressively to improve market share |
+| Premium Positioning | Maintain a higher-price market position |
+| Clearance / Cashflow | Support inventory reduction and cash recovery |
+
+The strategies are deterministic and explainable. Price changes remain subject to seller review.
+
+## How To Run
+
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe scripts\build_pricing_dataset.py
+.\.venv\Scripts\python.exe -m streamlit run src\dashboard\app.py
 ```
 
-### 2. Upgrade pip and install dependencies
+Open `http://localhost:8501` and select either sample data or **Processed Real Market Dataset** in the sidebar.
+
+## Data Workflow
+
+The **Market Update** tab supports the operational demo workflow:
+
+1. Add a product, if it is not already in the catalog.
+2. Update our store data: current price, cost, inventory, sales, target margin, and strategy.
+3. Enter observed market prices for a selected product.
+4. Record the latest FX rate in toman.
+5. Click **Run Build Pipeline** or run the build script from PowerShell.
+6. Select **Processed Real Market Dataset** to review updated recommendations.
+
+Raw sources:
+
+| File | Contents |
+| --- | --- |
+| `data/raw/products_master.csv` | Product catalog, URLs, status, and priority |
+| `data/raw/market_observations_template.csv` | Detailed public observation baseline |
+| `data/raw/daily_market_updates.csv` | Manually recorded latest market prices |
+| `data/raw/retailer_internal_demo_template.csv` | Seller-owned price, cost, inventory, sales, and strategy data |
+| `data/raw/global_usd_reference_template.csv` | Base USD references per product |
+| `data/raw/fx_rate_snapshots.csv` | Saved exchange-rate snapshots |
+
+Output:
+
+```text
+data/processed/dashboard_pricing_data.csv
+```
+
+Daily updates override observed market aggregates only where values are provided. Latest valid FX snapshots override the reference exchange rate and trigger recalculation of `theoretical_toman_price` and `iran_market_premium_pct`.
+
+## No Scraping By Design
+
+This version does not scrape retailer sites. The first portfolio release emphasizes traceable inputs, explicit seller review, stable schemas, and compliance-friendly manual observation. Automated collection can be introduced later only where source terms, quality controls, and operational ownership are clear.
+
+## Testing
+
+Run the complete test suite:
 
 ```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest tests\ -v --tb=short
 ```
 
-### 3. Run tests
+Run the project verification and dashboard import checks:
 
 ```powershell
-pytest
+.\.venv\Scripts\python.exe scripts\verify_project.py
+.\.venv\Scripts\python.exe -c "from src.dashboard import app; print('dashboard import ok')"
 ```
 
-### 4. Run the Streamlit dashboard
+The automated tests cover formatting and Persian-digit inputs, market and FX persistence, product/store updates, dataset building, aggregation, and recommendation behavior.
 
-```powershell
-streamlit run src/dashboard/app.py
-```
+## Roadmap
 
-The dashboard will open at `http://localhost:8501`
+- Move raw CSV persistence to a database with audit history
+- Integrate a reliable live FX API
+- Add compliant, source-approved market data collectors
+- Expose core workflows through FastAPI
+- Package reproducible deployment with Docker
+- Explore ML forecasting once enough trustworthy historical observations exist
 
-## Building Dashboard Data from Raw Market Inputs
+## Scope
 
-To convert raw market observations into dashboard-ready pricing data:
-
-```powershell
-python scripts/build_pricing_dataset.py
-```
-
-This pipeline:
-1. Loads market observations from `data/raw/market_observations_template.csv`
-2. Loads retailer internal data from `data/raw/retailer_internal_demo_template.csv`
-3. Loads USD reference prices from `data/raw/global_usd_reference_template.csv`
-4. Aggregates market data by product
-5. Calculates `theoretical_toman_price` and `iran_market_premium_pct`
-6. Outputs to `data/processed/dashboard_pricing_data.csv`
-
-The output is ready for the dashboard or further analysis.
-
-## Working with Real Market Data
-
-The dashboard supports three data source modes:
-
-### Option 1: Use Processed Real Market Dataset
-
-```powershell
-# 1. Edit raw market data files
-# - data/raw/market_observations_template.csv
-# - data/raw/retailer_internal_demo_template.csv
-# - data/raw/global_usd_reference_template.csv
-
-# 2. Build the processed dataset
-python scripts/build_pricing_dataset.py
-
-# 3. Run the dashboard
-streamlit run src/dashboard/app.py
-
-# 4. In the sidebar, select: "Processed Real Market Dataset"
-```
-
-### Option 2: Upload CSV File
-
-In the Streamlit sidebar, select "Upload CSV" and upload your own pricing data file.
-
-### Option 3: Use Sample Data
-
-In the Streamlit sidebar, select "Sample Data (Generated)" for demo/testing purposes.
-
-## User-Friendly Market Update Workflow
-
-Instead of manually editing CSV files, use the dashboard's **Market Update** console for quick, assisted updates:
-
-### Quick Daily Update (Recommended)
-
-```powershell
-# 1. Run the dashboard
-streamlit run src/dashboard/app.py
-
-# 2. Go to the "📝 Market Update" tab
-
-# 3. Select a product from the dropdown
-#    - Clickable source links (Torob, Digikala, Global Ref)
-#    - Quick price entry (min, median, max)
-#    - Availability status
-#    - Save with one click
-
-# 4. Enter FX rate (USDIRT or similar)
-#    - Source selector (manual, Nobitex, Navasan, etc.)
-#    - Rate input
-#    - Save FX snapshot
-
-# 5. Build processed dataset
-#    - Click "Run Build Pipeline" in the dashboard
-#    - Or manually: python scripts/build_pricing_dataset.py
-
-# 6. Dashboard automatically loads the updated data
-#    - Select "Processed Real Market Dataset" mode
-#    - See 5 products with latest market prices
-```
-
-### What Gets Stored
-
-- **products_master.csv**: Product catalog (10+ smartwatches) with URLs and priority
-- **daily_market_updates.csv**: Daily price snapshots (Torob, Digikala, Market Max)
-- **fx_rate_snapshots.csv**: Historical FX rates for USD/USDT/IRR conversions
-- **market_observations_template.csv**: Aggregated market observations
-- **retailer_internal_demo_template.csv**: Your pricing data
-- **global_usd_reference_template.csv**: Global base prices
-
-### Workflow Benefits
-
-✅ No manual CSV editing needed  
-✅ Source links open directly in browser  
-✅ Quick price validation  
-✅ FX rate history preserved  
-✅ One-click build to update dashboard  
-✅ Future-ready for API integration (Nobitex, Navasan, etc.)  
-
-## Project Structure
-
-```
-src/
-  data/
-    sample_data_generator.py    # Generate smartwatch dataset
-  pricing/
-    rules.py                     # Pricing rules engine
-    risk.py                      # Risk scoring
-    recommendation.py            # Main recommendation engine
-  dashboard/
-    app.py                       # Streamlit dashboard
-
-data/
-  processed/                     # Generated datasets
-
-tests/
-  test_pricing_engine.py         # Unit tests
-
-docs/
-```
-
-## How It Works
-
-1. **Load data** from sample generator or CSV
-2. **Apply pricing rules** based on cost, margin, competitor prices, and market conditions
-3. **Score risk** for each product (low/medium/high/critical)
-4. **Generate recommendations** with explanations
-5. **Simulate scenarios** (e.g., USD rate changes)
-
-## Key Concepts
-
-- **Target Margin**: Desired profit margin for products
-- **Competitor Median Price**: Market benchmark
-- **USD Change**: Exchange rate volatility indicator
-- **Risk Level**: Composite risk metric (inventory, margin, volatility, lead time)
-- **Action**: Recommended price change (increase/decrease/hold/urgent_review)
-
-## Real Market Data Foundation (Phase 3)
-
-Phase 3 introduces a data architecture that separates **public market observations** from **retailer internal data**. See [docs/PHASE_3_REAL_DATA_PLAN.md](docs/PHASE_3_REAL_DATA_PLAN.md) for detailed strategy.
-
-### Data Templates
-
-**Public Market Observations** → `data/raw/market_observations_template.csv`
-- Price listings from Torob, Digikala, and online stores
-- Seller names, availability status, warranty info
-- No scraping yet; manual collection is first step
-
-**Retailer Internal Data** → `data/raw/retailer_internal_demo_template.csv`
-- Our current prices, costs, inventory, sales history
-- Confidential to our store (demo/fictional data)
-- Never mixed with public market data
-
-**Global USD Reference** → `data/raw/global_usd_reference_template.csv`
-- Base USD prices for products (anchors for currency adjustments)
-- From official retailers, industry reports (no scraping)
-
-**Market Aggregation Utilities** → `src/data/market_aggregation.py`
-- Pure functions to aggregate market observations
-- Calculates: min/median/max prices, seller counts, price spreads
-- Output feeds into Phase 2 recommendation engine
-
-### Using Real Data
-
-The dashboard supports two data modes:
-
-### 1. Sample Data (Default)
-- Use pre-generated smartwatch dataset for testing and exploration
-- Deterministic data (same dataset every time with same seed)
-- Good for understanding the system before importing real data
-
-### 2. Upload Custom CSV
-- Click **"Upload CSV"** in the sidebar to import your own data
-- CSV must include all required columns (see template below)
-- Dashboard validates data and shows clear error messages
-- No data is saved to the server
-
-## CSV Data Template
-
-A template CSV file is provided in `data/raw/smartwatch_real_data_template.csv`
-
-### Required Columns
-
-```
-product_id              Product identifier (string)
-product_name            Product name (string)
-brand                   Brand name (string)
-model                   Model name (string)
-category                Category: Budget/Mid-Range/Premium (string)
-current_price           Current selling price in Toman (float)
-cost_price              Acquisition cost in Toman (float)
-inventory               Current stock level (integer)
-competitor_min_price    Lowest competitor price (float)
-competitor_median_price Most common competitor price (float)
-competitor_max_price    Highest competitor price (float)
-usd_rate                Current USD to Toman rate (float)
-usd_change_7d           USD rate change in last 7 days (%) (float)
-sales_7d                Units sold in last 7 days (integer)
-sales_30d               Units sold in last 30 days (integer)
-views_30d               Product page views in last 30 days (integer)
-conversion_rate         Sales / Views ratio (0-1) (float)
-target_margin           Desired profit margin (0-1) (float, e.g., 0.35 = 35%)
-supplier_lead_time_days Days to receive new stock (integer)
-```
-
-### Data Collection Tips
-
-- **Prices**: Export from your store system or POS
-- **Inventory**: Current stock from inventory management system
-- **Competitor Prices**: Manual observation or market research data
-- **Sales**: Aggregate from store analytics
-- **USD Rate**: Historical rate from exchange data providers
-
-### No Scraping
-
-This MVP does **not** include web scraping. All data must be:
-- Manually entered into the CSV
-- Exported from your store system
-- Imported from your analytics platform
-- Based on manual market observations
-
-See `data/raw/README.md` for more details and examples.
-
-## Formatting and Display
-
-The dashboard automatically formats all prices and metrics for readability:
-
-- **Prices**: Formatted with comma separators + "تومان" suffix (e.g., "7,800,000 تومان")
-- **Margins**: Displayed as signed percentages (e.g., "+35.0%")
-- **Actions**: Labeled with icons (📈 Increase, 📉 Decrease, etc.)
-- **Risk Levels**: Color-coded and labeled (✅ Low, ⚠️ Medium, 🔴 High, 🚨 Critical)
-
-## Dependencies
-
-- Python 3.8+
-- pandas - Data manipulation
-- numpy - Numerical computing
-- streamlit - Interactive dashboard
-- plotly - Data visualization
-- pytest - Testing
-
-All dependencies are installed by `pip install -r requirements.txt`
-
-## Notes
-
-This is an MVP for decision support, not an automatic pricing system. All price changes must be reviewed by a human decision-maker before implementation.
+PricePilot AI is a portfolio MVP and decision-support tool, not an autonomous repricing system. Sample and manually entered values are intended for demonstration and analysis; a human seller remains responsible for any commercial price change.
