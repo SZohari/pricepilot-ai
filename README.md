@@ -102,7 +102,7 @@ Run the API from the project root:
 .\.venv\Scripts\python.exe -m uvicorn src.api.main:app --reload
 ```
 
-Interactive API documentation is available at `http://127.0.0.1:8000/docs`.
+Interactive API documentation with typed request/response schemas and a recommendation example is available at `http://127.0.0.1:8000/docs`.
 
 ## Docker Usage
 

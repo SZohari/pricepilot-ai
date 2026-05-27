@@ -19,10 +19,29 @@ from src.data.manual_entry import (
     load_fx_rate_snapshots,
     load_products_master,
 )
+from src.api.schemas import (
+    BatchRecommendationResponse,
+    BuildDatasetResponse,
+    ErrorResponse,
+    HealthResponse,
+    ProductSummary,
+    RecommendationRequest,
+    RecommendationResponse,
+)
 from src.pricing.recommendation import recommend_price
 
 
-app = FastAPI(title="PricePilot AI API", version="0.1.0")
+app = FastAPI(
+    title="PricePilot AI API",
+    description="Market-aware pricing operations API for volatile retail markets.",
+    version="0.1.0",
+    openapi_tags=[
+        {"name": "Health", "description": "Service availability checks."},
+        {"name": "Products", "description": "Processed product catalog access."},
+        {"name": "Recommendations", "description": "Explainable pricing recommendations."},
+        {"name": "Dataset", "description": "Processed dataset build operations."},
+    ],
+)
 
 
 def _records_for_recommendation(df: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -45,13 +64,24 @@ def _build_and_save_processed_dataset() -> tuple[Path, pd.DataFrame]:
     return output_path, dataset
 
 
-@app.get("/health")
-def health() -> Dict[str, str]:
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Health"],
+    summary="Check API health",
+)
+def health() -> HealthResponse:
     """Return service availability status."""
-    return {"status": "ok", "service": "PricePilot AI API"}
+    return HealthResponse(status="ok", service="PricePilot AI API", version=app.version)
 
 
-@app.get("/products")
+@app.get(
+    "/products",
+    response_model=list[ProductSummary],
+    tags=["Products"],
+    summary="List processed products",
+    responses={500: {"model": ErrorResponse}},
+)
 def products() -> List[Dict[str, Any]]:
     """Return processed product catalog metadata when a built dataset exists."""
     try:
@@ -65,17 +95,29 @@ def products() -> List[Dict[str, Any]]:
     return dataset.reindex(columns=fields).fillna("").to_dict(orient="records")
 
 
-@app.post("/recommend-price")
-def recommendation(payload: Dict[str, Any]) -> Dict[str, Any]:
+@app.post(
+    "/recommend-price",
+    response_model=RecommendationResponse,
+    tags=["Recommendations"],
+    summary="Recommend a price for one product",
+    responses={400: {"model": ErrorResponse}},
+)
+def recommendation(payload: RecommendationRequest) -> Dict[str, Any]:
     """Produce one recommendation using the existing pricing engine."""
     try:
-        return recommend_price(payload)
+        return recommend_price(payload.model_dump(exclude_none=True))
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/recommendations/batch")
-def batch_recommendations() -> List[Dict[str, Any]]:
+@app.post(
+    "/recommendations/batch",
+    response_model=BatchRecommendationResponse,
+    tags=["Recommendations"],
+    summary="Recommend prices for all processed products",
+    responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+def batch_recommendations() -> Dict[str, Any]:
     """Produce recommendations for every product in the processed dataset."""
     try:
         dataset = load_processed_pricing_data()
@@ -84,10 +126,17 @@ def batch_recommendations() -> List[Dict[str, Any]]:
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    return [recommend_price(row) for row in _records_for_recommendation(dataset)]
+    recommendations = [recommend_price(row) for row in _records_for_recommendation(dataset)]
+    return {"count": len(recommendations), "recommendations": recommendations}
 
 
-@app.post("/build-dataset")
+@app.post(
+    "/build-dataset",
+    response_model=BuildDatasetResponse,
+    tags=["Dataset"],
+    summary="Build the processed pricing dataset",
+    responses={400: {"model": ErrorResponse}},
+)
 def build_dataset() -> Dict[str, Any]:
     """Build and persist the processed dashboard dataset."""
     try:
@@ -95,4 +144,9 @@ def build_dataset() -> Dict[str, Any]:
     except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return {"output_path": str(output_path), "product_count": len(dataset)}
+    return {
+        "status": "success",
+        "output_path": str(output_path),
+        "product_count": len(dataset),
+        "columns": list(dataset.columns),
+    }
