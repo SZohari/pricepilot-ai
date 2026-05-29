@@ -13,7 +13,7 @@ This project is intentionally human-in-the-loop: it assists pricing decisions, b
 
 ## Features
 
-- Streamlit dashboard with recommendations, analytics, product detail views, and USD shock simulation
+- Streamlit dashboard with recommendations, analytics, product detail views, and manual USD/Toman simulation
 - Six explainable pricing strategies for different retail goals
 - Readable Iranian toman entry with comma normalization, million-toman preview, and rial equivalent
 - Market Update Console for manually recording daily competitor prices
@@ -85,6 +85,20 @@ python -m venv .venv
 ```
 
 Open `http://localhost:8501` and select either sample data or **Processed Real Market Dataset** in the sidebar.
+
+## Demo Scenario: Iranian Smartwatch Market
+
+The repository includes a realistic demo scenario for an Iranian smartwatch and wearable retailer. It is not live scraped Iranian market data. It uses 20 wearable products, plausible global reference prices, fictional market observations, and an assumed exchange rate of 170,000 toman per USD.
+
+Use it when you want a richer portfolio demo than the small raw seed files:
+
+```powershell
+python scripts/load_demo_scenario.py
+python scripts/build_pricing_dataset.py
+streamlit run src/dashboard/app.py
+```
+
+After loading the scenario, choose **Processed Real Market Dataset** in the dashboard sidebar. The manual USD rate control can then be used to test how replacement cost affects recommendations.
 
 ## FastAPI Backend
 

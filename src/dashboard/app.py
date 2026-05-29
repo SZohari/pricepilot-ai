@@ -1,72 +1,89 @@
-"""Streamlit dashboard for pricing recommendations."""
+"""Streamlit dashboard for guided pricing operations."""
 
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+from datetime import datetime
 from pathlib import Path
 import sys
-import io
 
-# Add src to path for imports
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+
+# Add project root to path for direct Streamlit execution.
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.sample_data_generator import load_sample_data
-from src.data.build_pricing_dataset import load_processed_pricing_data
+from src.data.build_pricing_dataset import (
+    build_dashboard_pricing_dataset,
+    load_global_usd_reference,
+    load_market_observations,
+    load_processed_pricing_data,
+    load_retailer_internal_data,
+    save_dashboard_pricing_dataset,
+)
 from src.data.manual_entry import (
-    load_products_master,
-    load_daily_market_updates,
-    load_fx_rate_snapshots,
     append_daily_market_update,
     append_fx_rate_snapshot,
+    append_new_product,
+    generate_product_id,
     get_known_brands,
-    normalize_brand,
     get_latest_update_for_product,
     get_products_missing_update_today,
-    validate_daily_market_update,
-    validate_fx_rate_snapshot,
-    generate_product_id,
+    load_daily_market_updates,
+    load_fx_rate_snapshots,
+    load_products_master,
+    normalize_brand,
     product_id_exists,
-    validate_new_product_payload,
-    append_new_product,
-    validate_retailer_internal_payload,
     upsert_retailer_internal_data,
+    validate_new_product_payload,
+    validate_retailer_internal_payload,
 )
-from src.data.build_pricing_dataset import build_dashboard_pricing_dataset, load_market_observations, load_retailer_internal_data, load_global_usd_reference
 from src.pricing.recommendation import recommend_price
 from src.utils.formatting import (
-    format_toman,
-    format_percent,
-    format_margin,
+    format_action_badge,
     format_action_label,
-    format_risk_label,
-    format_price_comparison,
-    get_risk_color,
-    get_action_color,
-    format_price_preview,
-    format_price_input_value,
-    parse_price_input,
-    humanize_label,
-    safe_display,
-    format_optional_toman,
+    format_margin,
     format_optional_percent,
+    format_optional_toman,
+    format_percent,
     format_price_change,
     format_price_change_percent,
-    format_action_badge,
+    format_price_input_value,
+    format_price_preview,
     format_risk_badge,
+    format_risk_label,
+    format_toman,
+    humanize_label,
+    parse_price_input,
+    safe_display,
 )
-from src.utils.validation import validate_csv_columns, validate_csv_data, get_column_info
+from src.utils.validation import get_column_info, validate_csv_columns, validate_csv_data
+
+
+PROCESSED_DATASET_PATH = Path("data/processed/dashboard_pricing_data.csv")
+RAW_MARKET_PATH = "data/raw/market_observations_template.csv"
+RAW_PRODUCTS_PATH = "data/raw/products_master.csv"
+RAW_RETAILER_PATH = "data/raw/retailer_internal_demo_template.csv"
+RAW_USD_PATH = "data/raw/global_usd_reference_template.csv"
+RAW_UPDATES_PATH = "data/raw/daily_market_updates.csv"
+RAW_FX_PATH = "data/raw/fx_rate_snapshots.csv"
+
+STRATEGY_LABELS = {
+    "trust_builder": "Trust Builder",
+    "balanced": "Balanced",
+    "profit_protection": "Profit Protection",
+    "market_penetration": "Market Penetration",
+    "premium_positioning": "Premium Positioning",
+    "clearance_cashflow": "Clearance / Cashflow",
+}
+STRATEGY_KEYS = list(STRATEGY_LABELS.keys())
 
 
 def is_valid_source_link(link: str) -> bool:
+    """Return True when a source link is present and usable."""
     if not link:
         return False
     normalized = str(link).strip()
-    if normalized == "":
-        return False
-    if normalized.lower() in {"#", "n/a", "na", "none"}:
-        return False
-    return True
+    return normalized != "" and normalized.lower() not in {"#", "n/a", "na", "none"}
 
 
 def normalize_price_input_state(key: str) -> None:
@@ -80,1211 +97,933 @@ def normalize_price_input_state(key: str) -> None:
 def show_price_input_feedback(value: str) -> None:
     """Show immediate validation and readability feedback for a toman input."""
     parsed_value = parse_price_input(value)
-    if value.strip() and parsed_value is None:
+    if str(value or "").strip() and parsed_value is None:
         st.warning("Please enter a valid number.")
         return
 
     preview = format_price_preview(parsed_value)
     if preview:
-        st.markdown(f'<div dir="ltr"><code>{preview}</code></div>', unsafe_allow_html=True)
+        st.caption(preview)
     if parsed_value is not None and parsed_value >= 100_000_000:
-        st.warning("این عدد خیلی بزرگ است. مطمئن هستید قیمت را به تومان وارد کرده‌اید نه ریال؟")
+        st.warning("This is a very large number. Make sure the value is in toman, not rial.")
 
 
-def load_data_with_mode():
+def numeric_value(value: object, fallback: float = 0.0) -> float:
+    """Convert display data into a finite number for metrics and charts."""
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return numeric if pd.notna(numeric) else fallback
+
+
+def product_options(products_df: pd.DataFrame) -> dict[str, str]:
+    """Create display labels mapped to product IDs."""
+    if products_df.empty:
+        return {}
+    return {
+        f"{row['product_id']} - {row['product_name']}": row["product_id"]
+        for _, row in products_df.iterrows()
+    }
+
+
+def render_source_link(label: str, url: object) -> None:
+    """Render a product source link or a clear empty state."""
+    if is_valid_source_link(url):
+        st.markdown(f"[{label}]({url})")
+    else:
+        st.caption("Link not added yet.")
+
+
+def load_data_with_mode() -> tuple[pd.DataFrame | None, str]:
     """Load data from sample, processed real data, or uploaded CSV."""
     data_mode = st.sidebar.radio(
-        "📂 Data Source",
+        "Data source",
         options=[
             "Sample Data (Generated)",
             "Processed Real Market Dataset",
-            "Upload CSV"
+            "Upload CSV",
         ],
-        help="Choose between generated sample data, real market data, or upload your own CSV",
+        help="Choose the dataset used for recommendations.",
     )
-    
+
     if data_mode == "Processed Real Market Dataset":
-        st.sidebar.markdown("**Real Market Data**")
+        st.sidebar.caption("Uses the latest built dataset from raw market, store, and FX updates.")
         try:
             df = load_processed_pricing_data()
-            st.sidebar.success(f"✅ Loaded {len(df)} products from processed dataset")
-            return df
-        except FileNotFoundError as e:
-            st.sidebar.warning(str(e))
-            st.info(
-                "📝 **To use real market data:**\n"
-                "1. Edit files in `data/raw/`\n"
-                "2. Run: `python scripts/build_pricing_dataset.py`\n"
-                "3. Refresh this page"
-            )
-            return None
-        except ValueError as e:
-            st.sidebar.error(str(e))
-            st.error(f"❌ Dataset validation failed: {str(e)}")
-            return None
-    
-    elif data_mode == "Upload CSV":
-        st.sidebar.markdown("**Upload Real Data**")
+            st.sidebar.success(f"Loaded {len(df)} products.")
+            return df, data_mode
+        except FileNotFoundError:
+            st.sidebar.warning("No processed dataset found.")
+            return None, data_mode
+        except ValueError as exc:
+            st.sidebar.error(f"Dataset validation failed: {exc}")
+            return None, data_mode
+
+    if data_mode == "Upload CSV":
         uploaded_file = st.sidebar.file_uploader(
-            "Choose CSV file",
+            "Upload pricing CSV",
             type=["csv"],
-            help="CSV must contain all required columns"
+            help="CSV must contain the required pricing columns.",
         )
-        
-        if uploaded_file is not None:
-            try:
-                df = pd.read_csv(uploaded_file)
-                
-                # Validate columns
-                col_valid, missing_cols = validate_csv_columns(df)
-                if not col_valid:
-                    st.sidebar.error(f"❌ Missing columns: {', '.join(missing_cols)}")
-                    st.info("📋 **Required Columns:**\n" + get_column_info())
-                    return None
-                
-                # Validate data
-                data_valid, issues = validate_csv_data(df)
-                if not data_valid:
-                    st.sidebar.error(f"❌ Data issues:\n" + "\n".join(issues))
-                    return None
-                
-                st.sidebar.success(f"✅ Loaded {len(df)} products")
-                return df
-                
-            except Exception as e:
-                st.sidebar.error(f"❌ Error reading file: {str(e)}")
-                return None
-        else:
-            st.sidebar.info("📤 Waiting for CSV upload...")
-            return None
-    
-    else:
-        # Sample Data (Generated)
-        return load_sample_data()
+        if uploaded_file is None:
+            st.sidebar.info("Waiting for CSV upload.")
+            return None, data_mode
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as exc:
+            st.sidebar.error(f"Could not read CSV: {exc}")
+            return None, data_mode
+
+        col_valid, missing_cols = validate_csv_columns(df)
+        if not col_valid:
+            st.sidebar.error(f"Missing columns: {', '.join(missing_cols)}")
+            st.info("Required CSV columns:\n" + get_column_info())
+            return None, data_mode
+
+        data_valid, issues = validate_csv_data(df)
+        if not data_valid:
+            st.sidebar.error("Please fix the CSV data issues.")
+            for issue in issues:
+                st.warning(issue)
+            return None, data_mode
+
+        st.sidebar.success(f"Loaded {len(df)} products.")
+        return df, data_mode
+
+    st.sidebar.caption("Generated demo products for a quick walkthrough.")
+    return load_sample_data(), data_mode
 
 
-def main():
-    """Main Streamlit application."""
-    st.set_page_config(page_title="Pricing Intelligence", layout="wide")
-    
-    st.title("📊 Inflation-Aware Pricing Intelligence")
-    st.markdown("Rule-based pricing recommendations for smartwatches in volatile markets")
-    
-    # Load data
-    st.sidebar.title("⚙️ Controls")
-    
-    df = load_data_with_mode()
-    
-    if df is None or len(df) == 0:
-        st.warning("⏳ Please load data using the sidebar to continue.")
-        return
-    
-    # Pricing Strategy Selector (Phase 2)
-    st.sidebar.markdown("---")
-    is_phase2 = "our_current_price" in df.columns
-    if is_phase2:
-        st.sidebar.subheader("🎯 Pricing Strategy")
-        strategy_label_map = {
-            "trust_builder": "Trust Builder",
-            "balanced": "Balanced",
-            "profit_protection": "Profit Protection",
-            "market_penetration": "Market Penetration",
-            "premium_positioning": "Premium Positioning",
-            "clearance_cashflow": "Clearance / Cashflow",
-        }
+def render_sidebar(df: pd.DataFrame | None) -> tuple[pd.DataFrame | None, str | None, int | None, float, str]:
+    """Render global controls and return data, strategy, FX rate, shock, and data mode."""
+    st.sidebar.title("Controls")
+    df, data_mode = load_data_with_mode()
+
+    selected_strategy = None
+    manual_usd_rate = None
+    usd_shock = 0.0
+    if df is not None and not df.empty:
+        st.sidebar.divider()
+        st.sidebar.subheader("Pricing strategy")
         selected_strategy_label = st.sidebar.selectbox(
-            "Strategy",
-            options=list(strategy_label_map.values()),
-            index=1,  # Default to "Balanced"
-            help="Select pricing strategy for Phase 2 recommendations",
+            "Apply strategy",
+            options=list(STRATEGY_LABELS.values()),
+            index=1,
+            help="Applies this strategy to recommendation calculations for the current view.",
         )
         selected_strategy = {
-            label: key for key, label in strategy_label_map.items()
+            label: key for key, label in STRATEGY_LABELS.items()
         }[selected_strategy_label]
-    else:
-        selected_strategy = None
-    
-    # USD Shock Simulator
-    st.sidebar.markdown("---")
-    usd_shock = st.sidebar.slider(
-        "💵 USD Exchange Rate Shock (%)",
-        min_value=-10.0,
-        max_value=30.0,
-        value=0.0,
-        step=0.5,
-        help="Simulate USD rate changes to see price recommendations",
-    )
-    
-    # Generate recommendations with USD shock
-    @st.cache_data
-    def get_recommendations(shock, data_hash, strategy_override):
-        recommendations = []
-        for _, row in df.iterrows():
-            rec = recommend_price(row.to_dict(), usd_shock=shock, strategy=strategy_override)
-            rec["market_median_price"] = row.get(
-                "market_median_price",
-                row.get("competitor_median_price"),
-            )
-            recommendations.append(rec)
-        return pd.DataFrame(recommendations)
-    
-    recs_df = get_recommendations(usd_shock, hash(df.values.tobytes()), selected_strategy if is_phase2 else None)
-    
-    # KPI Section
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📈 Key Metrics")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Products", len(df))
-    
-    with col2:
-        increase_count = (recs_df["action"] == "increase_price").sum()
-        st.metric("↑ Increase", increase_count)
-    
-    with col3:
-        decrease_count = (recs_df["action"] == "decrease_price").sum()
-        st.metric("↓ Decrease", decrease_count)
-    
-    with col4:
-        critical_count = (recs_df["risk_level"] == "critical").sum() + (recs_df["risk_level"] == "high").sum()
-        st.metric("⚠ High Risk", critical_count)
-    
-    col5, col6 = st.columns(2)
-    with col5:
-        avg_margin = recs_df["current_margin"].mean()
-        st.metric("Avg Margin", f"{avg_margin:.1%}")
-    
-    with col6:
-        avg_rec_margin = recs_df["expected_margin"].mean()
-        st.metric("Expected Margin", f"{avg_rec_margin:.1%}")
-    
-    # Filters
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔍 Filters")
-    
-    # Brand filter: only show if 'brand' column exists in recommendations
-    if "brand" in recs_df.columns:
-        brand_options = sorted(recs_df["brand"].unique())
-        selected_brands = st.sidebar.multiselect(
-            "Brand",
-            options=brand_options,
-            default=brand_options[:5] if len(brand_options) >= 5 else brand_options,
+
+        st.sidebar.caption("Use the same strategy across the dashboard for a clean comparison.")
+        st.sidebar.divider()
+        st.sidebar.subheader("Exchange rate")
+        st.sidebar.caption("Use today’s exchange rate to test how replacement cost affects pricing.")
+        manual_usd_rate_text = st.sidebar.text_input(
+            "Manual USD Rate",
+            value="170,000",
+            help="Enter the USD/Toman rate. Examples: 170000, 170,000, ۱۷۰,۰۰۰.",
+            key="manual_usd_rate",
+            on_change=normalize_price_input_state,
+            args=("manual_usd_rate",),
         )
-    else:
-        selected_brands = None
-    
-    action_label_map = {
-        "increase_price": "Increase Price",
-        "decrease_price": "Decrease Price",
-        "hold_price": "Hold Price",
-        "urgent_review": "Urgent Review",
-    }
-    selected_action_labels = st.sidebar.multiselect(
-        "Action",
-        options=list(action_label_map.values()),
-        default=list(action_label_map.values()),
+        manual_usd_rate = parse_price_input(manual_usd_rate_text)
+        if manual_usd_rate is None or manual_usd_rate <= 0:
+            st.sidebar.warning("Enter a valid USD rate in toman.")
+            manual_usd_rate = None
+        else:
+            st.sidebar.caption(format_price_preview(manual_usd_rate))
+
+        with st.sidebar.expander("Advanced: FX simulation"):
+            usd_shock = st.slider(
+                "USD percentage shock",
+                min_value=-10.0,
+                max_value=30.0,
+                value=0.0,
+                step=0.5,
+                help="Optional stress test on top of the manual USD rate.",
+            )
+
+    st.sidebar.divider()
+    st.sidebar.info("Workflow: 1. Update data -> 2. Build dataset -> 3. Review recommendations")
+    return df, selected_strategy, manual_usd_rate, usd_shock, data_mode
+
+
+def apply_manual_usd_rate(row_dict: dict, manual_usd_rate: int | None) -> dict:
+    """Apply a manual USD/Toman rate to display-time recommendation inputs."""
+    if manual_usd_rate is None:
+        return row_dict
+
+    adjusted = dict(row_dict)
+    adjusted["usd_rate"] = manual_usd_rate
+    base_usd_price = numeric_value(adjusted.get("base_usd_price"), 0)
+    if base_usd_price > 0:
+        adjusted["theoretical_toman_price"] = base_usd_price * manual_usd_rate
+    return adjusted
+
+
+def build_recommendations(
+    df: pd.DataFrame,
+    usd_shock: float,
+    selected_strategy: str | None,
+    manual_usd_rate: int | None = None,
+) -> pd.DataFrame:
+    """Generate recommendations and preserve useful source fields for display."""
+    recommendations = []
+    for _, row in df.iterrows():
+        row_dict = apply_manual_usd_rate(row.to_dict(), manual_usd_rate)
+        strategy_override = selected_strategy if "our_current_price" in row_dict else None
+        rec = recommend_price(row_dict, usd_shock=usd_shock, strategy=strategy_override)
+        for field in [
+            "market_min_price",
+            "market_median_price",
+            "market_max_price",
+            "market_avg_price",
+            "torob_min_price",
+            "torob_median_price",
+            "digikala_price",
+            "seller_count",
+            "available_seller_count",
+            "base_usd_price",
+            "usd_rate",
+            "theoretical_toman_price",
+            "our_current_price",
+            "our_cost_price",
+            "our_inventory",
+            "our_sales_7d",
+            "our_sales_30d",
+            "our_target_margin",
+            "our_strategy",
+        ]:
+            if field in row_dict and field not in rec:
+                rec[field] = row_dict.get(field)
+        rec["market_median_price"] = row_dict.get(
+            "market_median_price",
+            row_dict.get("competitor_median_price", rec.get("market_median_price")),
+        )
+        recommendations.append(rec)
+    return pd.DataFrame(recommendations)
+
+
+def render_kpi_cards(recs_df: pd.DataFrame) -> None:
+    """Render top-level pricing operation KPIs."""
+    increase_count = int((recs_df["action"] == "increase_price").sum())
+    decrease_count = int((recs_df["action"] == "decrease_price").sum())
+    risk_count = int(recs_df["risk_level"].isin(["high", "critical"]).sum())
+    avg_premium = recs_df["iran_market_premium_pct"].dropna().mean() if "iran_market_premium_pct" in recs_df else None
+
+    cols = st.columns(5)
+    cols[0].metric("Total products", len(recs_df))
+    cols[1].metric("Need increase", increase_count)
+    cols[2].metric("Need decrease", decrease_count)
+    cols[3].metric("High/Critical risk", risk_count)
+    cols[4].metric(
+        "Avg Iran premium",
+        format_percent(avg_premium) if avg_premium is not None and pd.notna(avg_premium) else "—",
     )
-    selected_actions = [
-        key for key, label in action_label_map.items() if label in selected_action_labels
-    ]
-    
-    risk_label_map = {
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
-        "critical": "Critical",
-    }
-    selected_risk_labels = st.sidebar.multiselect(
-        "Risk Level",
-        options=list(risk_label_map.values()),
-        default=list(risk_label_map.values()),
-    )
-    selected_risk_levels = [
-        key for key, label in risk_label_map.items() if label in selected_risk_labels
-    ]
-    
-    # Apply filters robustly
-    filtered_recs = recs_df.copy()
-    if selected_brands is not None and len(selected_brands) > 0:
-        filtered_recs = filtered_recs[filtered_recs["brand"].isin(selected_brands)]
-    if len(selected_actions) > 0:
-        filtered_recs = filtered_recs[filtered_recs["action"].isin(selected_actions)]
-    if len(selected_risk_levels) > 0:
-        filtered_recs = filtered_recs[filtered_recs["risk_level"].isin(selected_risk_levels)]
-    filtered_recs = filtered_recs.reset_index(drop=True)
-    
-    # Main content area
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["📋 Recommendations", "📊 Analytics", "⚡ USD Shock", "🔍 Details", "📝 Market Update"]
-    )
-    
-    # Tab 1: Recommendations Table
-    with tab1:
-        st.subheader("Price Recommendations")
-        st.markdown(f"Showing {len(filtered_recs)} of {len(recs_df)} products")
-        
-        display_rows = []
-        for _, recommendation in filtered_recs.iterrows():
-            current_price = recommendation.get("current_price")
-            recommended_price = recommendation.get("recommended_price")
-            display_rows.append({
-                "Product": safe_display(recommendation.get("product_name")),
-                "Brand": safe_display(recommendation.get("brand")),
+
+
+def recommendation_table(recs_df: pd.DataFrame) -> pd.DataFrame:
+    """Return a clean decision-focused recommendation table."""
+    display_rows = []
+    for _, rec in recs_df.iterrows():
+        current_price = rec.get("current_price")
+        recommended_price = rec.get("recommended_price")
+        display_rows.append(
+            {
+                "Product": safe_display(rec.get("product_name")),
+                "Brand": safe_display(rec.get("brand")),
                 "Our Current Price": format_optional_toman(current_price),
                 "Recommended Price": format_optional_toman(recommended_price),
                 "Price Change": format_price_change(current_price, recommended_price),
                 "Price Change %": format_price_change_percent(current_price, recommended_price),
-                "Strategy": safe_display(humanize_label(recommendation.get("selected_strategy"))),
-                "Action": format_action_badge(recommendation.get("action")),
-                "Risk": format_risk_badge(recommendation.get("risk_level")),
-                "Market Median": format_optional_toman(recommendation.get("market_median_price")),
-                "Iran Premium %": format_optional_percent(recommendation.get("iran_market_premium_pct")),
-            })
+                "Strategy": safe_display(humanize_label(rec.get("selected_strategy"))),
+                "Action": format_action_badge(rec.get("action")),
+                "Risk": format_risk_badge(rec.get("risk_level")),
+                "Market Median": format_optional_toman(rec.get("market_median_price")),
+                "Iran Premium %": format_optional_percent(rec.get("iran_market_premium_pct")),
+            }
+        )
+    return pd.DataFrame(display_rows).fillna("—")
 
-        st.dataframe(pd.DataFrame(display_rows), use_container_width=True, hide_index=True)
-    
-    # Tab 2: Analytics
-    with tab2:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Action distribution
-            action_counts = filtered_recs["action"].value_counts()
-            fig_actions = px.pie(
-    values=action_counts.values,
-    names=[humanize_label(name) for name in action_counts.index],
-    title="📈 Price Actions Distribution",
-    color_discrete_map={
-        "increase_price": "#90EE90",
-        "decrease_price": "#FFB6C1",
-        "hold_price": "#FFFFCC",
-        "urgent_review": "#FF6347",
-    },
-)
-            st.plotly_chart(fig_actions, use_container_width=True)
-        
-        with col2:
-            # Risk distribution
-            risk_counts = filtered_recs["risk_level"].value_counts()
-            fig_risk = px.pie(
-    values=risk_counts.values,
-    names=[humanize_label(name) for name in risk_counts.index],
-    title="⚠️ Risk Level Distribution",
-    color_discrete_map={
-        "low": "#00CC00",
-        "medium": "#FFAA00",
-        "high": "#FF6600",
-        "critical": "#CC0000",
-    },
-)
-            st.plotly_chart(fig_risk, use_container_width=True)
-        
-        # Phase 2 specific analytics
-        if is_phase2 and "iran_market_premium_pct" in filtered_recs.columns:
-            st.subheader("🌍 Iran Market Premium Analysis")
-            premium_fig = px.histogram(
-                filtered_recs,
-                x="iran_market_premium_pct",
-                nbins=15,
-                title="Iran Market Premium Distribution",
-                labels={"iran_market_premium_pct": "Market Premium %"},
-            )
-            st.plotly_chart(premium_fig, use_container_width=True)
-        
-        # Price comparison chart
-        if "current_price" in filtered_recs.columns and "recommended_price" in filtered_recs.columns:
-            st.subheader("💰 Current vs Recommended Price")
-            comparison_data = filtered_recs[[
-                "product_name",
-                "current_price",
-                "recommended_price"
-            ]].head(15).copy()  # Limit to 15 for readability
-            
-            comparison_fig = go.Figure(
-                data=[
-                    go.Bar(
-                        x=comparison_data["product_name"],
-                        y=comparison_data["current_price"],
-                        name="Current Price",
-                        marker_color="lightblue",
-                    ),
-                    go.Bar(
-                        x=comparison_data["product_name"],
-                        y=comparison_data["recommended_price"],
-                        name="Recommended Price",
-                        marker_color="darkblue",
-                    ),
-                ]
-            )
-            comparison_fig.update_layout(
-                xaxis_title="Product",
-                yaxis_title="Price (Toman)",
-                hovermode="x unified",
-                height=400,
-            )
-            st.plotly_chart(comparison_fig, use_container_width=True)
-        
-        # Margin analysis
-        st.subheader("💰 Current vs Expected Margin")
-        margin_fig = go.Figure(
-            data=[
-                go.Bar(
-                    x=filtered_recs["product_name"],
-                    y=filtered_recs["current_margin"] * 100,
-                    name="Current Margin %",
-                    marker_color="lightblue",
-                ),
-                go.Bar(
-                    x=filtered_recs["product_name"],
-                    y=filtered_recs["expected_margin"] * 100,
-                    name="Expected Margin %",
-                    marker_color="darkblue",
-                ),
-            ]
-        )
-        margin_fig.update_layout(
-            xaxis_title="Product",
-            yaxis_title="Margin %",
-            hovermode="x unified",
-            height=400,
-        )
-        st.plotly_chart(margin_fig, use_container_width=True)
-    # Tab 3: USD Shock Simulator
-    with tab3:
-        st.subheader("💵 USD Exchange Rate Shock Simulator")
-        
-        st.info(
-            f"📊 **Current USD Shock: {usd_shock:+.1f}%**\n\n"
-            f"Use the slider on the left to test how price recommendations change with USD rate movements."
-        )
-        
-        # Show products affected
-        affected = recs_df[recs_df["triggered_rules"].apply(lambda x: "usd_rate" in str(x))]
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Products Affected by USD", len(affected))
-        with col2:
-            st.metric("Total Products", len(recs_df))
-        with col3:
-            pct_affected = (len(affected) / len(recs_df) * 100) if len(recs_df) > 0 else 0
-            st.metric("Exposure %", f"{pct_affected:.0f}%")
-        
-        st.markdown("---")
-        
-        # Show price changes
-        shock_view = filtered_recs[[
-            "product_name",
-            "current_price",
-            "recommended_price",
-            "action",
-        ]].copy()
-        
-        shock_view["Current"] = shock_view["current_price"].apply(format_toman)
-        shock_view["Recommended"] = shock_view["recommended_price"].apply(format_toman)
-        shock_view["Action"] = shock_view["action"].apply(format_action_label)
-        
-        display_shock = shock_view[[
-            "product_name",
-            "Current",
-            "Recommended",
-            "Action",
-        ]]
-        display_shock.columns = ["Product", "Current Price", "Recommended Price", "Action"]
-        
-        st.dataframe(display_shock, use_container_width=True, hide_index=True)
-    
-    # Tab 4: Details
-    with tab4:
-        st.subheader("🔍 Product Details & Analysis")
-        
-        if len(filtered_recs) == 0:
-            st.warning("No products match the current filters.")
+
+def render_overview_tab(recs_df: pd.DataFrame, data_mode: str) -> None:
+    """Render the guided overview and main recommendations table."""
+    st.info(
+        "PricePilot AI helps retailers adjust prices using market prices, store costs, "
+        "inventory, FX rate, and strategy."
+    )
+    st.caption(f"Current data source: {data_mode}")
+    render_kpi_cards(recs_df)
+
+    st.subheader("Recommended pricing decisions")
+    st.caption("Decision-focused view. Technical input fields are kept out of this table.")
+    if recs_df.empty:
+        st.warning("No recommendations available for the selected data source.")
+        return
+    st.dataframe(recommendation_table(recs_df), width="stretch", hide_index=True)
+
+
+def render_strategy_prices(strategy_prices: object, selected_strategy: object) -> None:
+    """Render all available strategy price options."""
+    if not isinstance(strategy_prices, dict) or not strategy_prices:
+        st.info("Strategy price options are not available for this product.")
+        return
+
+    cols = st.columns(3)
+    for idx, strategy_key in enumerate(STRATEGY_KEYS):
+        if strategy_key not in strategy_prices:
+            continue
+        label = STRATEGY_LABELS[strategy_key]
+        price = strategy_prices[strategy_key]
+        with cols[idx % 3]:
+            if strategy_key == selected_strategy:
+                st.success(f"{label}\n\n{format_optional_toman(price)}\n\nSelected")
+            else:
+                st.info(f"{label}\n\n{format_optional_toman(price)}")
+
+
+def render_decision_center_tab(recs_df: pd.DataFrame) -> None:
+    """Render a readable product-level decision view."""
+    if recs_df.empty:
+        st.warning("No products are available for review.")
+        return
+
+    product_names = recs_df["product_name"].fillna("Unnamed product").tolist()
+    selected_product = st.selectbox("Select product", options=product_names)
+    product_rec = recs_df[recs_df["product_name"] == selected_product].iloc[0]
+
+    st.subheader(safe_display(product_rec.get("product_name")))
+    st.caption(
+        f"{safe_display(product_rec.get('brand'))} | "
+        f"Strategy: {humanize_label(product_rec.get('selected_strategy') or product_rec.get('our_strategy')) or 'Balanced'} | "
+        f"Action: {humanize_label(product_rec.get('action'))}"
+    )
+
+    cols = st.columns(4)
+    cols[0].metric("Current price", format_optional_toman(product_rec.get("current_price")))
+    cols[1].metric("Recommended price", format_optional_toman(product_rec.get("recommended_price")))
+    cols[2].metric(
+        "Price change",
+        format_price_change(product_rec.get("current_price"), product_rec.get("recommended_price")),
+        format_price_change_percent(product_rec.get("current_price"), product_rec.get("recommended_price")),
+    )
+    cols[3].metric("Risk", format_risk_label(product_rec.get("risk_level")))
+
+    st.markdown("#### Market position")
+    market_cols = st.columns(4)
+    market_cols[0].metric("Market min", format_optional_toman(product_rec.get("market_min_price")))
+    market_cols[1].metric("Market median", format_optional_toman(product_rec.get("market_median_price")))
+    market_cols[2].metric("Market max", format_optional_toman(product_rec.get("market_max_price")))
+    market_cols[3].metric("Our current", format_optional_toman(product_rec.get("current_price")))
+
+    st.markdown("#### Strategy explanation")
+    explanation = product_rec.get("explanation")
+    st.info(explanation if explanation else "No explanation is available for this recommendation.")
+
+    st.markdown("#### Triggered rules")
+    triggered_rules = product_rec.get("triggered_rules")
+    if isinstance(triggered_rules, list) and triggered_rules:
+        for rule in triggered_rules:
+            st.write(f"- {humanize_label(rule)}")
+    else:
+        st.caption("No additional rule triggers for this product.")
+
+    st.markdown("#### Strategy price options")
+    render_strategy_prices(product_rec.get("strategy_prices"), product_rec.get("selected_strategy"))
+
+    with st.expander("Additional context"):
+        context_cols = st.columns(3)
+        context_cols[0].metric("Current margin", format_margin(product_rec.get("current_margin", 0)))
+        context_cols[1].metric("Expected margin", format_margin(product_rec.get("expected_margin", 0)))
+        context_cols[2].metric("Inventory", int(numeric_value(product_rec.get("our_inventory"), 0)))
+        st.caption(f"Market position: {safe_display(product_rec.get('competitor_position'))}")
+
+
+def render_market_update_section(products_df: pd.DataFrame, updates_df: pd.DataFrame) -> None:
+    """Render market price update workflow."""
+    options = product_options(products_df)
+    if not options:
+        st.warning("No products found in the product master.")
+        return
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        selected_product_label = st.selectbox("Product", options=list(options.keys()), key="product_select")
+        selected_product_id = options[selected_product_label]
+    product_row = products_df[products_df["product_id"] == selected_product_id].iloc[0]
+
+    latest_update = get_latest_update_for_product(updates_df, selected_product_id)
+    with col2:
+        if latest_update:
+            observed_at = safe_display(latest_update.get("observed_at"))
+            st.success(f"Latest market update: {observed_at}")
         else:
-            selected_product = st.selectbox(
-                "Select a product:",
-                options=filtered_recs["product_name"],
-            )
-            
-            product_rec = filtered_recs[filtered_recs["product_name"] == selected_product].iloc[0]
-            
-            # Global Reference Data (Phase 2)
-            if is_phase2:
-                st.markdown("### 🌍 Global Reference")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    base_usd = product_rec.get("base_usd_price", 0)
-                    st.metric(
-                        "Base USD Price",
-                        f"${base_usd:.2f}" if base_usd else "N/A",
-                    )
-                
-                with col2:
-                    usd_rate = product_rec.get("usd_rate", 0)
-                    st.metric(
-                        "USD Rate",
-                        f"{usd_rate:,.0f}" if usd_rate else "N/A",
-                    )
-                
-                with col3:
-                    theo_toman = product_rec.get("theoretical_toman_price", 0)
-                    st.metric(
-                        "Theoretical Toman",
-                        format_toman(theo_toman) if theo_toman else "N/A",
-                    )
-                
-                st.markdown("---")
-                
-                # Market Data (Phase 2)
-                st.markdown("### 📊 Market Data")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    iran_prem = product_rec.get("iran_market_premium_pct")
-                    st.metric(
-                        "Iran Market Premium",
-                        format_percent(iran_prem) if iran_prem is not None else "N/A",
-                    )
-                
-                with col2:
-                    st.metric(
-                        "Seller Count",
-                        f"{int(product_rec.get('seller_count', 0))}" if product_rec.get('seller_count') else "N/A",
-                    )
-                
-                with col3:
-                    avail_sellers = product_rec.get("available_seller_count", 0)
-                    st.metric(
-                        "Available Sellers",
-                        f"{int(avail_sellers)}" if avail_sellers else "N/A",
-                    )
-                
-                st.markdown("---")
-                
-                # Market Price Range
-                st.markdown("### 💹 Market Price Range")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    market_min = product_rec.get("market_min_price", 0)
-                    st.metric(
-                        "Market Min",
-                        format_toman(market_min) if market_min else "N/A",
-                    )
-                
-                with col2:
-                    market_med = product_rec.get("market_median_price", 0)
-                    st.metric(
-                        "Market Median",
-                        format_toman(market_med) if market_med else "N/A",
-                    )
-                
-                with col3:
-                    market_max = product_rec.get("market_max_price", 0)
-                    st.metric(
-                        "Market Max",
-                        format_toman(market_max) if market_max else "N/A",
-                    )
-                
-                if product_rec.get("torob_min_price") or product_rec.get("digikala_price"):
-                    st.markdown("---")
-                    st.markdown("### 🛍️ Platform Prices")
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        torob_min = product_rec.get("torob_min_price", 0)
-                        st.metric(
-                            "Torob Min",
-                            format_toman(torob_min) if torob_min else "N/A",
-                        )
-                    
-                    with col2:
-                        torob_med = product_rec.get("torob_median_price", 0)
-                        st.metric(
-                            "Torob Median",
-                            format_toman(torob_med) if torob_med else "N/A",
-                        )
-                    
-                    with col3:
-                        digikala = product_rec.get("digikala_price", 0)
-                        st.metric(
-                            "Digikala",
-                            format_toman(digikala) if digikala else "N/A",
-                        )
-                
-                st.markdown("---")
-                
-                # Our Internal Data (Phase 2)
-                st.markdown("### 🏪 Our Retail Data")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    our_curr = product_rec.get("our_current_price", 0)
-                    st.metric(
-                        "Our Current Price",
-                        format_toman(our_curr) if our_curr else "N/A",
-                    )
-                
-                with col2:
-                    our_cost = product_rec.get("our_cost_price", 0)
-                    st.metric(
-                        "Our Cost Price",
-                        format_toman(our_cost) if our_cost else "N/A",
-                    )
-                
-                with col3:
-                    our_inv = product_rec.get("our_inventory", 0)
-                    st.metric(
-                        "Our Inventory",
-                        f"{int(our_inv)}" if our_inv else "N/A",
-                    )
-                
-                st.markdown("---")
-                
-                # Our Sales and Targets (Phase 2)
-                st.markdown("### 📈 Our Performance")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    sales_7d = product_rec.get("our_sales_7d", 0)
-                    st.metric(
-                        "Sales (7d)",
-                        f"{int(sales_7d)}" if sales_7d else "0",
-                    )
-                
-                with col2:
-                    sales_30d = product_rec.get("our_sales_30d", 0)
-                    st.metric(
-                        "Sales (30d)",
-                        f"{int(sales_30d)}" if sales_30d else "0",
-                    )
-                
-                with col3:
-                    target_margin = product_rec.get("our_target_margin", 0)
-                    st.metric(
-                        "Target Margin",
-                        format_percent(target_margin) if target_margin else "N/A",
-                    )
-                
-                st.markdown("---")
-            
-            # Price comparison (MVP or Phase 2)
-            st.markdown("### 💰 Price Information")
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                if is_phase2:
-                    our_curr = product_rec.get("our_current_price", 0)
-                    st.metric(
-                        "Current Price",
-                        format_toman(our_curr) if our_curr else "N/A",
-                    )
-                else:
-                    st.metric(
-                        "Current Price",
-                        format_toman(product_rec.get("current_price", 0)),
-                    )
-            
-            with col2:
-                st.metric(
-                    "Recommended Price",
-                    format_toman(product_rec["recommended_price"]),
-                )
-            
-            with col3:
-                current_price = product_rec.get("our_current_price") or product_rec.get("current_price", 0)
-                if current_price > 0:
-                    price_diff_pct = (
-                        (product_rec["recommended_price"] - current_price) / current_price * 100
-                    )
-                    st.metric(
-                        "Price Change",
-                        f"{price_diff_pct:+.1f}%",
-                    )
-            
-            st.markdown("---")
-            
-            # Profitability
-            st.markdown("### 📊 Profitability Metrics")
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                cost_price = product_rec.get("our_cost_price") or product_rec.get("cost_price", 0)
-                st.metric("Cost Price", format_toman(cost_price))
-            
-            with col2:
-                st.metric(
-                    "Current Margin",
-                    format_margin(product_rec.get("current_margin", 0)),
-                )
-            
-            with col3:
-                st.metric(
-                    "Expected Margin",
-                    format_margin(product_rec.get("expected_margin", 0)),
-                )
-            
-            st.markdown("---")
-            
-            # Strategy and Pricing (Phase 2)
-            if is_phase2 and product_rec.get("strategy_prices"):
-                st.markdown("### 🎯 Strategy Price Options")
-                
-                strategy_prices = product_rec.get("strategy_prices", {})
-                selected_strat = product_rec.get("selected_strategy", "N/A")
-                
-                # Display all strategy prices
-                strategy_labels = {
-                    "trust_builder": "🤝 Trust Builder",
-                    "balanced": "⚖️ Balanced",
-                    "profit_protection": "💰 Profit Protection",
-                    "market_penetration": "🎯 Market Penetration",
-                    "premium_positioning": "👑 Premium Positioning",
-                    "clearance_cashflow": "🏷️ Clearance / Cashflow",
-                }
-                
-                cols = st.columns(3)
-                col_idx = 0
-                for strategy_key, price in strategy_prices.items():
-                    with cols[col_idx % 3]:
-                        label = strategy_labels.get(strategy_key, strategy_key.replace("_", " ").title())
-                        is_selected = (strategy_key == selected_strat)
-                        
-                        if is_selected:
-                            st.success(f"**{label}**\n{format_toman(price)}\n✓ Selected")
-                        else:
-                            st.info(f"**{label}**\n{format_toman(price)}")
-                    col_idx += 1
-                
-                st.markdown("---")
-            
-            # Risk and positioning
-            st.markdown("### ⚠️ Risk & Market Position")
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric(
-                    "Risk Level",
-                    format_risk_label(product_rec["risk_level"]),
-                )
-            
-            with col2:
-                st.metric(
-                    "Recommended Action",
-                    format_action_label(product_rec["action"]),
-                )
-            
-            with col3:
-                st.metric(
-                    "Competitor Position",
-                    "See below →",
-                )
-            
-            st.markdown("---")
-            
-            # Explanation and rules
-            st.markdown("### 📝 Recommendation Details")
-            
-            st.markdown("**Competitor Position:**")
-            st.info(product_rec.get("competitor_position", "N/A"))
-            
-            st.markdown("**Triggered Rules:**")
-            if product_rec.get("triggered_rules"):
-                for rule in product_rec["triggered_rules"]:
-                    st.write(f"• {humanize_label(rule)}")
-            else:
-                st.write("No specific rules triggered.")
-            
-            st.markdown("**Full Explanation:**")
-            st.markdown(product_rec.get("explanation", "N/A"))
-    
-    # Tab 5: Market Update Console
-    with tab5:
-        st.subheader("📝 Market Update Console")
-        st.markdown("Manually update market prices and exchange rates.")
-        
-        # Try to load products master
-        try:
-            products_df = load_products_master()
-            updates_df = load_daily_market_updates()
-        except FileNotFoundError:
-            st.error("❌ Products master or updates file not found. Please ensure data/raw/ files exist.")
-            st.stop()
+            st.info("No recent market update saved for this product.")
 
-        # Add a product to the catalog/reference files before recording market prices.
-        st.markdown("### ➕ Add New Product")
-        add_col1, add_col2, add_col3 = st.columns(3)
-        with add_col1:
-            # Brand selector: known brands plus an Other/Custom option
-            known = get_known_brands(products_df)
-            recommended = sorted(set(known))
-            brand_options = recommended + ["Other / Custom"]
-            brand_choice = st.selectbox("Brand", options=brand_options, index=0, key="new_product_brand_choice")
-            if brand_choice == "Other / Custom":
-                new_brand = st.text_input("Brand (Custom)", key="new_product_brand")
-            else:
-                new_brand = brand_choice
-            new_model = st.text_input("Model", key="new_product_model")
-            new_product_name = st.text_input("Product Name", key="new_product_name")
-            new_product_query = st.text_input("Product Query", key="new_product_query")
-            new_priority = st.selectbox("Priority", options=["high", "medium", "low"], index=1, key="new_product_priority")
-            new_active = st.checkbox("Active", value=True, key="new_product_active")
-        with add_col2:
-            new_current_price = st.text_input(
-                "Our Current Price (تومان)", placeholder="e.g. 37,200,000",
-                key="new_current_price", on_change=normalize_price_input_state, args=("new_current_price",),
-            )
-            show_price_input_feedback(new_current_price)
-            new_cost_price = st.text_input(
-                "Our Cost Price (تومان)", placeholder="e.g. 25,000,000",
-                key="new_cost_price", on_change=normalize_price_input_state, args=("new_cost_price",),
-            )
-            show_price_input_feedback(new_cost_price)
-            new_inventory = st.number_input("Inventory", min_value=0, step=1, key="new_inventory")
-            new_sales_7d = st.number_input("Sales (7d)", min_value=0, step=1, key="new_sales_7d")
-            new_sales_30d = st.number_input("Sales (30d)", min_value=0, step=1, key="new_sales_30d")
-            new_target_margin = st.number_input("Target Margin", min_value=0.0, max_value=1.0, value=0.30, step=0.01, key="new_target_margin")
-            new_strategy = st.selectbox(
-                "Strategy",
-                options=[
-                    "trust_builder", "balanced", "profit_protection",
-                    "market_penetration", "premium_positioning", "clearance_cashflow",
-                ],
-                index=1,
-                key="new_strategy",
-            )
-        with add_col3:
-            new_base_usd_price = st.text_input("Base USD Price", placeholder="e.g. 399.99", key="new_base_usd_price")
-            new_base_usd_source = st.text_input("Base USD Price Source", placeholder="e.g. official_site", key="new_base_usd_source")
-            new_usd_rate = st.text_input(
-                "USD Rate (تومان)", placeholder="e.g. 90,000",
-                key="new_usd_rate", on_change=normalize_price_input_state, args=("new_usd_rate",),
-            )
-            show_price_input_feedback(new_usd_rate)
-            new_source_url = st.text_input("USD Source URL", key="new_source_url")
-            new_observed_at = st.date_input("USD Observed At", key="new_observed_at")
-            new_torob_url = st.text_input("Torob URL", key="new_torob_url")
-            new_digikala_url = st.text_input("Digikala URL", key="new_digikala_url")
-            new_global_url = st.text_input("Global Reference URL", key="new_global_url")
-        new_catalog_notes = st.text_area("Product Notes", key="new_catalog_notes")
-        new_usd_notes = st.text_area("USD Reference Notes", key="new_usd_notes")
-        generated_product_id = generate_product_id(new_brand, new_model)
-        if generated_product_id:
-            st.caption(f"Product ID: {generated_product_id}")
+    st.caption(f"{safe_display(product_row.get('brand'))} {safe_display(product_row.get('model'))}")
+    source_cols = st.columns(3)
+    with source_cols[0]:
+        render_source_link("Torob source", product_row.get("torob_url"))
+    with source_cols[1]:
+        render_source_link("Digikala source", product_row.get("digikala_url"))
+    with source_cols[2]:
+        render_source_link("Global reference", product_row.get("global_reference_url"))
 
-        if st.button("➕ Save New Product", key="save_new_product"):
-            # Normalize brand client-side before payload (append_new_product also normalizes)
-            normalized_brand = normalize_brand(new_brand, known_brands=known)
+    price_cols = st.columns(2)
+    with price_cols[0]:
+        torob_min = st.text_input(
+            "Torob min price (toman)",
+            placeholder="e.g. 37,200,000",
+            key="torob_min_price",
+            on_change=normalize_price_input_state,
+            args=("torob_min_price",),
+        )
+        show_price_input_feedback(torob_min)
+        torob_median = st.text_input(
+            "Torob median price (toman)",
+            placeholder="e.g. 37,200,000",
+            key="torob_median_price",
+            on_change=normalize_price_input_state,
+            args=("torob_median_price",),
+        )
+        show_price_input_feedback(torob_median)
+    with price_cols[1]:
+        digikala_price = st.text_input(
+            "Digikala price (toman)",
+            placeholder="e.g. 38,000,000",
+            key="digikala_price",
+            on_change=normalize_price_input_state,
+            args=("digikala_price",),
+        )
+        show_price_input_feedback(digikala_price)
+        market_max = st.text_input(
+            "Market max price (toman)",
+            placeholder="e.g. 40,000,000",
+            key="market_max_price",
+            on_change=normalize_price_input_state,
+            args=("market_max_price",),
+        )
+        show_price_input_feedback(market_max)
 
-            new_payload = {
-                'product_id': generated_product_id,
-                'brand': normalized_brand,
-                'model': new_model,
-                'product_name': new_product_name,
-                'product_query': new_product_query,
-                'priority': new_priority,
-                'active': new_active,
-                'torob_url': new_torob_url,
-                'digikala_url': new_digikala_url,
-                'global_reference_url': new_global_url,
-                'catalog_notes': new_catalog_notes,
-                'our_current_price': new_current_price,
-                'our_cost_price': new_cost_price,
-                'our_inventory': new_inventory,
-                'our_sales_7d': new_sales_7d,
-                'our_sales_30d': new_sales_30d,
-                'our_target_margin': new_target_margin,
-                'our_strategy': new_strategy,
-                'base_usd_price': new_base_usd_price,
-                'base_usd_price_source': new_base_usd_source,
-                'usd_rate': new_usd_rate,
-                'source_url': new_source_url,
-                'observed_at': new_observed_at.isoformat(),
-                'usd_notes': new_usd_notes,
-            }
-            is_valid, issues = validate_new_product_payload(new_payload)
-            try:
-                retailer_df = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
-                usd_df = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
-                duplicate = product_id_exists(generated_product_id, products_df, retailer_df, usd_df)
-            except (FileNotFoundError, ValueError) as e:
-                is_valid = False
-                issues.append(str(e))
-                duplicate = False
-            if duplicate:
-                issues.append(f"product_id already exists: {generated_product_id}")
-                is_valid = False
-            if not is_valid:
-                for issue in issues:
-                    st.error(issue)
-            else:
-                try:
-                    append_new_product(
-                        'data/raw/products_master.csv',
-                        'data/raw/retailer_internal_demo_template.csv',
-                        'data/raw/global_usd_reference_template.csv',
-                        new_payload,
-                    )
-                    st.success("Product added successfully. Please refresh the page to see it in the selector.")
-                except ValueError as e:
-                    st.error(str(e))
+    availability_options = {
+        "Available": "available",
+        "Low Stock": "low_stock",
+        "Unavailable": "unavailable",
+    }
+    availability_label = st.selectbox("Availability", options=list(availability_options.keys()), key="availability")
+    notes = st.text_area("Notes", placeholder="Optional: source, timestamp, or observation context", key="market_notes")
 
-        st.markdown("---")
-        
-        # Section 1: Today's Update Status
-        st.markdown("### 📊 Today's Update Status")
-        
-        from datetime import datetime
-        today = datetime.now().strftime('%Y-%m-%d')
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            active_count = len(products_df[products_df.get('active', True) == True])
-            st.metric("📦 Active Products", active_count)
-        
-        with col2:
-            if not updates_df.empty:
-                updates_df['date'] = pd.to_datetime(updates_df['observed_at']).dt.strftime('%Y-%m-%d')
-                updated_today = len(updates_df[updates_df['date'] == today]['product_id'].unique())
-            else:
-                updated_today = 0
-            st.metric("✅ Updated Today", updated_today)
-        
-        with col3:
-            missing_count = active_count - updated_today
-            st.metric("⏳ Missing Today", missing_count)
-        
-        with col4:
-            missing_products = get_products_missing_update_today(products_df, updates_df, today)
-            high_priority = len(missing_products[missing_products.get('priority', 'medium') == 'high'])
-            st.metric("🔴 High-Priority Missing", high_priority)
-        
-        st.markdown("---")
-        
-        # Section 2: Quick Product Update
-        st.markdown("### 💡 Quick Product Update")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            product_options = {f"{row['product_id']} - {row['product_name']}": row['product_id'] 
-                             for _, row in products_df.iterrows()}
-            selected_product = st.selectbox(
-                "Select Product",
-                options=list(product_options.keys()),
-                key="product_select"
-            )
-            selected_product_id = product_options[selected_product]
-        
-        # Show product details
-        product_row = products_df[products_df['product_id'] == selected_product_id].iloc[0]
-        
-        st.markdown(f"**Product:** {product_row['brand']} {product_row['model']}")
-        priority_label = {
-            'high': '🔥 High Priority',
-            'medium': '⚡ Medium Priority',
-            'low': 'ℹ️ Low Priority',
-        }.get(str(product_row.get('priority', '')).lower(), str(product_row.get('priority', 'Unknown')).title())
-        st.markdown(f"**Priority:** {priority_label}")
-        
-        # Show source links
-        sources_cols = st.columns(3)
-        with sources_cols[0]:
-            if is_valid_source_link(product_row.get('torob_url')):
-                st.markdown(f"[🔗 Torob]({product_row['torob_url']})")
-            else:
-                st.markdown("_Link not added yet_")
-        with sources_cols[1]:
-            if is_valid_source_link(product_row.get('digikala_url')):
-                st.markdown(f"[🔗 Digikala]({product_row['digikala_url']})")
-            else:
-                st.markdown("_Link not added yet_")
-        with sources_cols[2]:
-            if is_valid_source_link(product_row.get('global_reference_url')):
-                st.markdown(f"[🔗 Global Ref]({product_row['global_reference_url']})")
-            else:
-                st.markdown("_Link not added yet_")
-        
-        st.markdown("---")
-        
-        # Price input fields
-        st.markdown("**Enter Market Prices (at least one required):**")
-        st.markdown("_Compact price preview is shown below each input to help readability._")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            torob_min = st.text_input(
-                "Torob Min Price (تومان)", value="", placeholder="e.g. 37,200,000",
-                key="torob_min_price", on_change=normalize_price_input_state, args=("torob_min_price",),
-            )
-            show_price_input_feedback(torob_min)
-            torob_median = st.text_input(
-                "Torob Median Price (تومان)", value="", placeholder="e.g. 37,200,000",
-                key="torob_median_price", on_change=normalize_price_input_state, args=("torob_median_price",),
-            )
-            show_price_input_feedback(torob_median)
-        
-        with col2:
-            digikala_price = st.text_input(
-                "Digikala Price (تومان)", value="", placeholder="e.g. 38,000,000",
-                key="digikala_price", on_change=normalize_price_input_state, args=("digikala_price",),
-            )
-            show_price_input_feedback(digikala_price)
-            market_max = st.text_input(
-                "Market Max Price (تومان)", value="", placeholder="e.g. 40,000,000",
-                key="market_max_price", on_change=normalize_price_input_state, args=("market_max_price",),
-            )
-            show_price_input_feedback(market_max)
-        
-        availability_options = {
-            'Available': 'available',
-            'Low Stock': 'low_stock',
-            'Unavailable': 'unavailable',
+    if st.button("Save market update", key="save_market"):
+        raw_prices = {
+            "Torob min price": torob_min,
+            "Torob median price": torob_median,
+            "Digikala price": digikala_price,
+            "Market max price": market_max,
         }
-        availability_label = st.selectbox(
-            "Availability Status",
-            options=list(availability_options.keys()),
-            key="availability"
-        )
-        availability = availability_options[availability_label]
-        
-        notes = st.text_area("Notes", placeholder="e.g., price checked at 14:30", key="market_notes")
-        
-        # Save button
-        if st.button("💾 Save Market Update", key="save_market"):
-            parsed_torob_min = parse_price_input(torob_min)
-            parsed_torob_median = parse_price_input(torob_median)
-            parsed_digikala = parse_price_input(digikala_price)
-            parsed_market_max = parse_price_input(market_max)
-
-            invalid_fields = []
-            if torob_min and parsed_torob_min is None:
-                invalid_fields.append("Torob Min Price")
-            if torob_median and parsed_torob_median is None:
-                invalid_fields.append("Torob Median Price")
-            if digikala_price and parsed_digikala is None:
-                invalid_fields.append("Digikala Price")
-            if market_max and parsed_market_max is None:
-                invalid_fields.append("Market Max Price")
-
-            if invalid_fields:
-                st.error(
-                    f"❌ Invalid price values in: {', '.join(invalid_fields)}."
-                    " Please enter numbers using digits, commas, or spaces."
-                )
-            else:
-                update_dict = {
-                    'product_id': selected_product_id,
-                    'observed_at': datetime.now().isoformat(),
-                    'torob_min_price': parsed_torob_min,
-                    'torob_median_price': parsed_torob_median,
-                    'digikala_price': parsed_digikala,
-                    'market_max_price': parsed_market_max,
-                    'availability_note': availability,
-                    'notes': notes,
-                }
-
-                try:
-                    append_daily_market_update('data/raw/daily_market_updates.csv', update_dict)
-                    st.success(f"✅ Market update saved for {product_row['product_name']}!")
-                    st.rerun()
-                except ValueError as e:
-                    st.error(f"❌ Validation error: {str(e)}")
-        
-        st.markdown("---")
-
-        # Section 3: Our store data
-        st.markdown("### 🏪 Our Store Data")
-        st.markdown("Update your own pricing, inventory, sales, margin, and strategy.")
-        try:
-            store_df = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
-        except (FileNotFoundError, ValueError) as e:
-            st.error(str(e))
-            store_df = pd.DataFrame()
-
-        store_product_label = st.selectbox(
-            "Select Product for Store Data",
-            options=list(product_options.keys()),
-            key="store_product_select",
-        )
-        store_product_id = product_options[store_product_label]
-        stored_rows = store_df[store_df['product_id'] == store_product_id] if not store_df.empty else pd.DataFrame()
-        stored = stored_rows.iloc[-1] if not stored_rows.empty else None
-
-        if stored is not None:
-            st.caption(
-                f"Current: {format_toman(stored['our_current_price'])} | "
-                f"Cost: {format_toman(stored['our_cost_price'])} | "
-                f"Inventory: {int(stored['our_inventory'])} | "
-                f"Sales 7d/30d: {int(stored['our_sales_7d'])}/{int(stored['our_sales_30d'])} | "
-                f"Margin: {float(stored['our_target_margin']):.0%} | "
-                f"Strategy: {stored['our_strategy']}"
-            )
-
-        store_current_default = format_price_input_value(stored['our_current_price']) if stored is not None else ""
-        store_cost_default = format_price_input_value(stored['our_cost_price']) if stored is not None else ""
-        store_current_key = f"store_current_price_{store_product_id}"
-        store_cost_key = f"store_cost_price_{store_product_id}"
-        store_col1, store_col2 = st.columns(2)
-        with store_col1:
-            store_current_price = st.text_input(
-                "Our Current Price (تومان)", value=store_current_default,
-                key=store_current_key, on_change=normalize_price_input_state, args=(store_current_key,),
-            )
-            show_price_input_feedback(store_current_price)
-            store_inventory = st.number_input(
-                "Our Inventory", min_value=0,
-                value=int(stored['our_inventory']) if stored is not None else 0,
-                step=1, key=f"store_inventory_{store_product_id}",
-            )
-            store_sales_7d = st.number_input(
-                "Our Sales (7d)", min_value=0,
-                value=int(stored['our_sales_7d']) if stored is not None else 0,
-                step=1, key=f"store_sales_7d_{store_product_id}",
-            )
-        with store_col2:
-            store_cost_price = st.text_input(
-                "Our Cost Price (تومان)", value=store_cost_default,
-                key=store_cost_key, on_change=normalize_price_input_state, args=(store_cost_key,),
-            )
-            show_price_input_feedback(store_cost_price)
-            store_sales_30d = st.number_input(
-                "Our Sales (30d)", min_value=0,
-                value=int(stored['our_sales_30d']) if stored is not None else 0,
-                step=1, key=f"store_sales_30d_{store_product_id}",
-            )
-            store_target_margin = st.number_input(
-                "Our Target Margin", min_value=0.0, max_value=1.0,
-                value=float(stored['our_target_margin']) if stored is not None else 0.30,
-                step=0.01, key=f"store_target_margin_{store_product_id}",
-            )
-
-        strategies = [
-            "trust_builder", "balanced", "profit_protection",
-            "market_penetration", "premium_positioning", "clearance_cashflow",
+        parsed_prices = {label: parse_price_input(value) for label, value in raw_prices.items()}
+        invalid_fields = [
+            label for label, value in parsed_prices.items()
+            if str(raw_prices[label] or "").strip() and value is None
         ]
-        stored_strategy = stored['our_strategy'] if stored is not None and stored['our_strategy'] in strategies else "balanced"
-        store_strategy = st.selectbox(
-            "Our Strategy",
-            options=strategies,
-            index=strategies.index(stored_strategy),
-            key=f"store_strategy_{store_product_id}",
-        )
-        if st.button("💾 Save Store Data", key="save_store_data"):
-            store_payload = {
-                'our_current_price': store_current_price,
-                'our_cost_price': store_cost_price,
-                'our_inventory': store_inventory,
-                'our_sales_7d': store_sales_7d,
-                'our_sales_30d': store_sales_30d,
-                'our_target_margin': store_target_margin,
-                'our_strategy': store_strategy,
-            }
-            is_valid, issues = validate_retailer_internal_payload(store_payload)
-            if not is_valid:
-                for issue in issues:
-                    st.error(issue)
-            else:
-                try:
-                    upsert_retailer_internal_data(
-                        'data/raw/retailer_internal_demo_template.csv',
-                        store_product_id,
-                        store_payload,
-                    )
-                    st.success("Store data updated successfully. Run Build Dataset to refresh recommendations.")
-                except ValueError as e:
-                    st.error(str(e))
+        if invalid_fields:
+            st.error(f"Invalid price values in: {', '.join(invalid_fields)}.")
+            return
+        if not any(value is not None and value > 0 for value in parsed_prices.values()):
+            st.error("Enter at least one market price before saving.")
+            return
 
-        st.markdown("---")
-        
-        # Section 4: FX Rate Update
-        st.markdown("### 💱 FX Rate Update")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            fx_source = st.selectbox(
-                "FX Source",
-                options=["manual", "nobitex_usdt_proxy", "navasan", "tgju", "bonbast"],
-                help="Future versions will support API integration",
-                key="fx_source"
+        update_dict = {
+            "product_id": selected_product_id,
+            "observed_at": datetime.now().isoformat(),
+            "torob_min_price": parsed_prices["Torob min price"],
+            "torob_median_price": parsed_prices["Torob median price"],
+            "digikala_price": parsed_prices["Digikala price"],
+            "market_max_price": parsed_prices["Market max price"],
+            "availability_note": availability_options[availability_label],
+            "notes": notes,
+        }
+        try:
+            append_daily_market_update(RAW_UPDATES_PATH, update_dict)
+            st.success(f"Market update saved for {product_row['product_name']}.")
+            st.rerun()
+        except ValueError as exc:
+            st.error(f"Validation error: {exc}")
+
+
+def render_store_update_section(products_df: pd.DataFrame) -> None:
+    """Render our store data update workflow."""
+    options = product_options(products_df)
+    if not options:
+        st.warning("No products found in the product master.")
+        return
+
+    try:
+        store_df = load_retailer_internal_data(RAW_RETAILER_PATH)
+    except (FileNotFoundError, ValueError) as exc:
+        st.error(str(exc))
+        store_df = pd.DataFrame()
+
+    selected_label = st.selectbox("Product", options=list(options.keys()), key="store_product_select")
+    product_id = options[selected_label]
+    stored_rows = store_df[store_df["product_id"] == product_id] if not store_df.empty else pd.DataFrame()
+    stored = stored_rows.iloc[-1] if not stored_rows.empty else None
+
+    if stored is not None:
+        st.caption(
+            f"Current {format_toman(stored['our_current_price'])} | "
+            f"Cost {format_toman(stored['our_cost_price'])} | "
+            f"Inventory {int(stored['our_inventory'])} | "
+            f"Sales 7d/30d {int(stored['our_sales_7d'])}/{int(stored['our_sales_30d'])} | "
+            f"Margin {float(stored['our_target_margin']):.0%} | "
+            f"Strategy {humanize_label(stored['our_strategy'])}"
+        )
+
+    current_key = f"store_current_price_{product_id}"
+    cost_key = f"store_cost_price_{product_id}"
+    col1, col2 = st.columns(2)
+    with col1:
+        store_current_price = st.text_input(
+            "Current price (toman)",
+            value=format_price_input_value(stored["our_current_price"]) if stored is not None else "",
+            key=current_key,
+            on_change=normalize_price_input_state,
+            args=(current_key,),
+        )
+        show_price_input_feedback(store_current_price)
+        store_inventory = st.number_input(
+            "Inventory",
+            min_value=0,
+            value=int(stored["our_inventory"]) if stored is not None else 0,
+            step=1,
+            key=f"store_inventory_{product_id}",
+        )
+        store_sales_7d = st.number_input(
+            "Sales (7d)",
+            min_value=0,
+            value=int(stored["our_sales_7d"]) if stored is not None else 0,
+            step=1,
+            key=f"store_sales_7d_{product_id}",
+        )
+    with col2:
+        store_cost_price = st.text_input(
+            "Cost price (toman)",
+            value=format_price_input_value(stored["our_cost_price"]) if stored is not None else "",
+            key=cost_key,
+            on_change=normalize_price_input_state,
+            args=(cost_key,),
+        )
+        show_price_input_feedback(store_cost_price)
+        store_sales_30d = st.number_input(
+            "Sales (30d)",
+            min_value=0,
+            value=int(stored["our_sales_30d"]) if stored is not None else 0,
+            step=1,
+            key=f"store_sales_30d_{product_id}",
+        )
+        store_target_margin = st.number_input(
+            "Target margin",
+            min_value=0.0,
+            max_value=1.0,
+            value=float(stored["our_target_margin"]) if stored is not None else 0.30,
+            step=0.01,
+            key=f"store_target_margin_{product_id}",
+        )
+
+    stored_strategy = stored["our_strategy"] if stored is not None and stored["our_strategy"] in STRATEGY_KEYS else "balanced"
+    store_strategy_label = st.selectbox(
+        "Strategy",
+        options=list(STRATEGY_LABELS.values()),
+        index=STRATEGY_KEYS.index(stored_strategy),
+        key=f"store_strategy_{product_id}",
+    )
+    store_strategy = {label: key for key, label in STRATEGY_LABELS.items()}[store_strategy_label]
+
+    if st.button("Save store data", key="save_store_data"):
+        store_payload = {
+            "our_current_price": store_current_price,
+            "our_cost_price": store_cost_price,
+            "our_inventory": store_inventory,
+            "our_sales_7d": store_sales_7d,
+            "our_sales_30d": store_sales_30d,
+            "our_target_margin": store_target_margin,
+            "our_strategy": store_strategy,
+        }
+        is_valid, issues = validate_retailer_internal_payload(store_payload)
+        if not is_valid:
+            for issue in issues:
+                st.error(issue)
+            return
+        try:
+            upsert_retailer_internal_data(RAW_RETAILER_PATH, product_id, store_payload)
+            st.success("Store data updated. Rebuild the dataset to refresh recommendations.")
+        except ValueError as exc:
+            st.error(str(exc))
+
+
+def render_fx_update_section() -> None:
+    """Render FX rate update workflow."""
+    col1, col2 = st.columns(2)
+    with col1:
+        fx_source = st.selectbox(
+            "FX source",
+            options=["manual", "nobitex_usdt_proxy", "navasan", "tgju", "bonbast"],
+            format_func=humanize_label,
+            key="fx_source",
+        )
+    with col2:
+        fx_symbol = st.text_input("Symbol", value="USDIRT", key="fx_symbol")
+
+    fx_rate = st.text_input(
+        "Manual FX rate (toman)",
+        value="45,000",
+        placeholder="e.g. 45,000",
+        key="fx_rate_toman",
+        on_change=normalize_price_input_state,
+        args=("fx_rate_toman",),
+    )
+    parsed_fx_rate = parse_price_input(fx_rate)
+    show_price_input_feedback(fx_rate)
+    if parsed_fx_rate:
+        st.caption(f"Preview: {parsed_fx_rate:,.0f} toman | {parsed_fx_rate * 10:,.0f} rial")
+
+    fx_notes = st.text_area("Notes", placeholder="Optional: source URL or timestamp", key="fx_notes")
+    if st.button("Save FX rate", key="save_fx"):
+        if parsed_fx_rate is None or parsed_fx_rate <= 0:
+            st.error("Please enter a valid positive FX rate in toman.")
+            return
+
+        fx_dict = {
+            "source": fx_source,
+            "symbol": fx_symbol,
+            "rate_toman": parsed_fx_rate,
+            "observed_at": datetime.now().isoformat(),
+            "notes": fx_notes,
+        }
+        try:
+            append_fx_rate_snapshot(RAW_FX_PATH, fx_dict)
+            st.success(f"FX rate saved: {fx_symbol} = {parsed_fx_rate:,.0f} toman.")
+            st.rerun()
+        except ValueError as exc:
+            st.error(f"Validation error: {exc}")
+
+
+def render_add_product_section(products_df: pd.DataFrame) -> None:
+    """Render add product workflow."""
+    known_brands = get_known_brands(products_df)
+    brand_options = sorted(set(known_brands)) + ["Other / Custom"]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        brand_choice = st.selectbox("Brand", options=brand_options, key="new_product_brand_choice")
+        new_brand = (
+            st.text_input("Custom brand", key="new_product_brand")
+            if brand_choice == "Other / Custom"
+            else brand_choice
+        )
+        new_model = st.text_input("Model", key="new_product_model")
+        new_product_name = st.text_input("Product name", key="new_product_name")
+        new_product_query = st.text_input("Product search query", key="new_product_query")
+        new_priority = st.selectbox("Priority", options=["high", "medium", "low"], index=1, key="new_product_priority")
+        new_active = st.checkbox("Active", value=True, key="new_product_active")
+    with col2:
+        new_current_price = st.text_input(
+            "Current price (toman)",
+            placeholder="e.g. 37,200,000",
+            key="new_current_price",
+            on_change=normalize_price_input_state,
+            args=("new_current_price",),
+        )
+        show_price_input_feedback(new_current_price)
+        new_cost_price = st.text_input(
+            "Cost price (toman)",
+            placeholder="e.g. 25,000,000",
+            key="new_cost_price",
+            on_change=normalize_price_input_state,
+            args=("new_cost_price",),
+        )
+        show_price_input_feedback(new_cost_price)
+        new_inventory = st.number_input("Inventory", min_value=0, step=1, key="new_inventory")
+        new_sales_7d = st.number_input("Sales (7d)", min_value=0, step=1, key="new_sales_7d")
+        new_sales_30d = st.number_input("Sales (30d)", min_value=0, step=1, key="new_sales_30d")
+        new_target_margin = st.number_input(
+            "Target margin",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.30,
+            step=0.01,
+            key="new_target_margin",
+        )
+        new_strategy_label = st.selectbox(
+            "Strategy",
+            options=list(STRATEGY_LABELS.values()),
+            index=1,
+            key="new_strategy",
+        )
+        new_strategy = {label: key for key, label in STRATEGY_LABELS.items()}[new_strategy_label]
+    with col3:
+        new_base_usd_price = st.text_input("Base USD price", placeholder="e.g. 399.99", key="new_base_usd_price")
+        new_base_usd_source = st.text_input("Base USD price source", placeholder="e.g. official_site", key="new_base_usd_source")
+        new_usd_rate = st.text_input(
+            "USD rate (toman)",
+            placeholder="e.g. 90,000",
+            key="new_usd_rate",
+            on_change=normalize_price_input_state,
+            args=("new_usd_rate",),
+        )
+        show_price_input_feedback(new_usd_rate)
+        new_source_url = st.text_input("USD source URL", key="new_source_url")
+        new_observed_at = st.date_input("USD observed at", key="new_observed_at")
+        new_torob_url = st.text_input("Torob URL", key="new_torob_url")
+        new_digikala_url = st.text_input("Digikala URL", key="new_digikala_url")
+        new_global_url = st.text_input("Global reference URL", key="new_global_url")
+
+    new_catalog_notes = st.text_area("Product notes", key="new_catalog_notes")
+    new_usd_notes = st.text_area("USD reference notes", key="new_usd_notes")
+    generated_product_id = generate_product_id(new_brand, new_model)
+    if generated_product_id:
+        st.caption(f"Product ID: {generated_product_id}")
+
+    if st.button("Save new product", key="save_new_product"):
+        normalized_brand = normalize_brand(new_brand, known_brands=known_brands)
+        new_payload = {
+            "product_id": generated_product_id,
+            "brand": normalized_brand,
+            "model": new_model,
+            "product_name": new_product_name,
+            "product_query": new_product_query,
+            "priority": new_priority,
+            "active": new_active,
+            "torob_url": new_torob_url,
+            "digikala_url": new_digikala_url,
+            "global_reference_url": new_global_url,
+            "catalog_notes": new_catalog_notes,
+            "our_current_price": new_current_price,
+            "our_cost_price": new_cost_price,
+            "our_inventory": new_inventory,
+            "our_sales_7d": new_sales_7d,
+            "our_sales_30d": new_sales_30d,
+            "our_target_margin": new_target_margin,
+            "our_strategy": new_strategy,
+            "base_usd_price": new_base_usd_price,
+            "base_usd_price_source": new_base_usd_source,
+            "usd_rate": new_usd_rate,
+            "source_url": new_source_url,
+            "observed_at": new_observed_at.isoformat(),
+            "usd_notes": new_usd_notes,
+        }
+        is_valid, issues = validate_new_product_payload(new_payload)
+        try:
+            retailer_df = load_retailer_internal_data(RAW_RETAILER_PATH)
+            usd_df = load_global_usd_reference(RAW_USD_PATH)
+            duplicate = product_id_exists(generated_product_id, products_df, retailer_df, usd_df)
+        except (FileNotFoundError, ValueError) as exc:
+            is_valid = False
+            issues.append(str(exc))
+            duplicate = False
+        if duplicate:
+            issues.append(f"Product ID already exists: {generated_product_id}")
+            is_valid = False
+        if not is_valid:
+            for issue in issues:
+                st.error(issue)
+            return
+        try:
+            append_new_product(RAW_PRODUCTS_PATH, RAW_RETAILER_PATH, RAW_USD_PATH, new_payload)
+            st.success("Product added. Rebuild the dataset to include it in recommendations.")
+        except ValueError as exc:
+            st.error(str(exc))
+
+
+def render_build_dataset_section(products_df: pd.DataFrame) -> None:
+    """Render processed dataset build workflow."""
+    st.caption("After saving updates, rebuild the dataset to refresh recommendations.")
+    if PROCESSED_DATASET_PATH.exists():
+        modified = datetime.fromtimestamp(PROCESSED_DATASET_PATH.stat().st_mtime)
+        st.success(f"Last processed dataset found: {modified.strftime('%Y-%m-%d %H:%M')}")
+    else:
+        st.warning("No processed dataset found. Build the dataset first.")
+
+    st.code("python scripts/build_pricing_dataset.py", language="bash")
+    if st.button("Recalculate recommendations from saved inputs", key="run_build"):
+        try:
+            with st.spinner("Building processed dataset..."):
+                market = load_market_observations(RAW_MARKET_PATH)
+                retailer = load_retailer_internal_data(RAW_RETAILER_PATH)
+                usd = load_global_usd_reference(RAW_USD_PATH)
+                daily_updates = load_daily_market_updates(RAW_UPDATES_PATH)
+                fx_snapshots = load_fx_rate_snapshots(RAW_FX_PATH)
+                result = build_dashboard_pricing_dataset(
+                    market,
+                    retailer,
+                    usd,
+                    daily_updates_df=daily_updates,
+                    fx_snapshots_df=fx_snapshots,
+                    products_df=products_df,
+                )
+                save_dashboard_pricing_dataset(result)
+            st.success(f"Build complete. Generated {len(result)} recommendation rows.")
+        except Exception as exc:
+            st.error(f"Build failed: {exc}")
+
+
+def render_data_operations_tab() -> None:
+    """Render all data entry and maintenance workflows."""
+    st.caption("Use these sections to maintain the saved inputs behind recommendations.")
+    try:
+        products_df = load_products_master()
+        updates_df = load_daily_market_updates()
+    except FileNotFoundError as exc:
+        st.error(f"Raw data file missing: {exc}")
+        return
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    missing_products = get_products_missing_update_today(products_df, updates_df, today)
+    active_count = len(products_df[products_df.get("active", True) == True])
+    updated_today = 0
+    if not updates_df.empty:
+        updates_with_date = updates_df.copy()
+        updates_with_date["date"] = pd.to_datetime(updates_with_date["observed_at"], errors="coerce").dt.strftime("%Y-%m-%d")
+        updated_today = len(updates_with_date[updates_with_date["date"] == today]["product_id"].unique())
+
+    status_cols = st.columns(3)
+    status_cols[0].metric("Active products", active_count)
+    status_cols[1].metric("Updated today", updated_today)
+    status_cols[2].metric("Missing updates", len(missing_products))
+
+    with st.expander("A. Update Market Prices", expanded=True):
+        render_market_update_section(products_df, updates_df)
+    with st.expander("B. Update Our Store Data"):
+        render_store_update_section(products_df)
+    with st.expander("C. Update FX Rate"):
+        render_fx_update_section()
+    with st.expander("D. Add New Product"):
+        render_add_product_section(products_df)
+    with st.expander("E. Build Processed Dataset"):
+        render_build_dataset_section(products_df)
+
+
+def render_analytics_tab(recs_df: pd.DataFrame) -> None:
+    """Render high-level visual summaries."""
+    if recs_df.empty:
+        st.warning("No recommendation data available for charts.")
+        return
+
+    chart_df = recs_df.copy()
+    chart_df["Action"] = chart_df["action"].apply(humanize_label)
+    chart_df["Risk"] = chart_df["risk_level"].apply(humanize_label)
+    chart_df["Price Change %"] = chart_df.apply(
+        lambda row: numeric_value(row.get("recommended_price"), 0) / numeric_value(row.get("current_price"), 1) - 1
+        if numeric_value(row.get("current_price"), 0) > 0
+        else 0,
+        axis=1,
+    ) * 100
+
+    col1, col2 = st.columns(2)
+    with col1:
+        action_counts = chart_df["Action"].value_counts().reset_index()
+        action_counts.columns = ["Action", "Count"]
+        st.plotly_chart(px.bar(action_counts, x="Action", y="Count", title="Action distribution"), width="stretch")
+    with col2:
+        risk_counts = chart_df["Risk"].value_counts().reset_index()
+        risk_counts.columns = ["Risk", "Count"]
+        st.plotly_chart(px.bar(risk_counts, x="Risk", y="Count", title="Risk distribution"), width="stretch")
+
+    col3, col4 = st.columns(2)
+    with col3:
+        st.plotly_chart(
+            px.histogram(chart_df, x="Price Change %", nbins=15, title="Price change distribution"),
+            width="stretch",
+        )
+    with col4:
+        if "iran_market_premium_pct" in chart_df.columns:
+            premium_df = chart_df.dropna(subset=["iran_market_premium_pct"]).copy()
+            premium_df["Iran Premium %"] = premium_df["iran_market_premium_pct"] * 100
+            st.plotly_chart(
+                px.histogram(premium_df, x="Iran Premium %", nbins=15, title="Market premium distribution"),
+                width="stretch",
             )
-        
-        with col2:
-            fx_symbol = st.text_input("Symbol", value="USDIRT", key="fx_symbol")
-        
-        fx_rate = st.text_input(
-            "Rate (Toman per Unit)", value="45,000", placeholder="e.g. 45,000",
-            key="fx_rate_toman", on_change=normalize_price_input_state, args=("fx_rate_toman",),
-        )
-        show_price_input_feedback(fx_rate)
-        fx_notes = st.text_area("Notes (e.g., source URL, timestamp)", placeholder="e.g., from Nobitex at 14:30", key="fx_notes")
-        
-        if st.button("💾 Save FX Rate", key="save_fx"):
-            parsed_fx_rate = parse_price_input(fx_rate)
-            if parsed_fx_rate is None or parsed_fx_rate <= 0:
-                st.error("❌ Please enter a valid FX rate in Toman using digits, commas, or spaces.")
-            else:
-                fx_dict = {
-                    'source': fx_source,
-                    'symbol': fx_symbol,
-                    'rate_toman': parsed_fx_rate,
-                    'observed_at': datetime.now().isoformat(),
-                    'notes': fx_notes,
-                }
+        else:
+            st.info("Market premium data is not available for this dataset.")
 
-                try:
-                    append_fx_rate_snapshot('data/raw/fx_rate_snapshots.csv', fx_dict)
-                    st.success(f"✅ FX rate saved: {fx_symbol} = {parsed_fx_rate:,.0f} Toman")
-                    st.rerun()
-                except ValueError as e:
-                    st.error(f"❌ Validation error: {str(e)}")
-        
-        st.markdown("---")
-        
-        # Section 5: Build Dataset
-        st.markdown("### 🔨 Build Processing Dataset")
-        st.markdown(
-            "After updating market prices and FX rates, rebuild the processed dataset "
-            "so the dashboard can use the new data."
-        )
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.code("python scripts/build_pricing_dataset.py", language="bash")
-        
-        with col2:
-            if st.button("🚀 Run Build Pipeline", key="run_build"):
-                try:
-                    st.info("Building processed dataset...")
-                    
-                    # Load raw data
-                    market = load_market_observations('data/raw/market_observations_template.csv')
-                    retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
-                    usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
-                    daily_updates = load_daily_market_updates('data/raw/daily_market_updates.csv')
-                    fx_snapshots = load_fx_rate_snapshots('data/raw/fx_rate_snapshots.csv')
-                    
-                    # Build dashboard dataset
-                    result = build_dashboard_pricing_dataset(
-                        market,
-                        retailer,
-                        usd,
-                        daily_updates_df=daily_updates,
-                        fx_snapshots_df=fx_snapshots,
-                        products_df=products_df,
-                    )
-                    
-                    # Save
-                    from src.data.build_pricing_dataset import save_dashboard_pricing_dataset
-                    save_dashboard_pricing_dataset(result)
-                    
-                    st.success(f"✅ Build successful! Generated {len(result)} products.")
-                    st.markdown("**Next step:** Go back to Data Source selector and choose 'Processed Real Market Dataset'")
-                    
-                except Exception as e:
-                    st.error(f"❌ Build failed: {str(e)}")
+    comparison_df = chart_df[["product_name", "current_price", "recommended_price"]].head(15).copy()
+    comparison_df = comparison_df.rename(
+        columns={
+            "product_name": "Product",
+            "current_price": "Current Price",
+            "recommended_price": "Recommended Price",
+        }
+    )
+    comparison_long = comparison_df.melt(id_vars="Product", var_name="Price Type", value_name="Price")
+    st.plotly_chart(
+        px.bar(
+            comparison_long,
+            x="Product",
+            y="Price",
+            color="Price Type",
+            barmode="group",
+            title="Current price vs recommended price",
+        ),
+        width="stretch",
+    )
+
+
+def render_system_tab(data_mode: str) -> None:
+    """Render lightweight technical/project information."""
+    st.caption("Technical details for demos, development, and API review.")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Current data source", data_mode)
+        st.caption(f"Processed dataset path: {PROCESSED_DATASET_PATH}")
+        if PROCESSED_DATASET_PATH.exists():
+            st.success("Processed dataset is available.")
+        else:
+            st.warning("No processed dataset found. Go to Data Operations and build the dataset first.")
+    with col2:
+        st.code("uvicorn src.api.main:app --reload", language="bash")
+        st.caption("API run command")
+        st.code("streamlit run src/dashboard/app.py", language="bash")
+        st.caption("Dashboard run command")
+
+    st.info("Test status note: run the project test suite before a demo or handoff.")
+    st.markdown("API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)")
+
+
+def main() -> None:
+    """Main Streamlit application."""
+    st.set_page_config(page_title="PricePilot AI", layout="wide")
+    st.title("PricePilot AI")
+    st.caption("Guided pricing operations for smartwatch retail teams.")
+
+    df, selected_strategy, manual_usd_rate, usd_shock, data_mode = render_sidebar(None)
+    if df is None or df.empty:
+        if data_mode == "Processed Real Market Dataset":
+            st.warning("No processed dataset found. Go to Data Operations and build the dataset first.")
+        elif data_mode == "Upload CSV":
+            st.info("Upload a CSV in the sidebar to review recommendations.")
+        else:
+            st.warning("No products are available for recommendations.")
+
+        tabs = st.tabs(["🏠 Overview", "🎯 Decision Center", "📝 Data Operations", "📊 Analytics", "⚙️ System / API"])
+        with tabs[2]:
+            render_data_operations_tab()
+        with tabs[4]:
+            render_system_tab(data_mode)
+        return
+
+    recs_df = build_recommendations(df, usd_shock, selected_strategy, manual_usd_rate)
+    tabs = st.tabs(["🏠 Overview", "🎯 Decision Center", "📝 Data Operations", "📊 Analytics", "⚙️ System / API"])
+    with tabs[0]:
+        render_overview_tab(recs_df, data_mode)
+    with tabs[1]:
+        render_decision_center_tab(recs_df)
+    with tabs[2]:
+        render_data_operations_tab()
+    with tabs[3]:
+        render_analytics_tab(recs_df)
+    with tabs[4]:
+        render_system_tab(data_mode)
 
 
 if __name__ == "__main__":

@@ -28,6 +28,8 @@ The dashboard brings together four distinct data types:
 
 Keeping these sources separate matters. Public observations describe the market; internal store data describes the seller's own commercial position.
 
+The demo scenario uses realistic market assumptions and public product references, but does not claim to be live scraped Iranian market data.
+
 ## Pipeline
 
 ```text
