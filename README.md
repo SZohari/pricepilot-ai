@@ -24,6 +24,26 @@ This project is intentionally human-in-the-loop: it assists pricing decisions, b
 - Lightweight FastAPI backend for recommendations, product lookup, and dataset builds
 - Defensive validation and automated test coverage for the data and recommendation workflow
 
+## Screenshots
+
+### Overview
+<img width="2456" height="923" alt="overview" src="https://github.com/user-attachments/assets/cbda3dd0-2ad3-499c-9d08-1f625cb8f664" />
+
+
+### Decision Center
+<img width="2531" height="937" alt="decision-center" src="https://github.com/user-attachments/assets/375adc08-4411-49bb-ab65-2f5b8229d0df" />
+
+
+### Data Operations
+<img width="2145" height="847" alt="data-operations" src="https://github.com/user-attachments/assets/f8e5a770-5294-4659-8f06-b903c317d07d" />
+
+
+### FastAPI Backend
+<img width="2522" height="941" alt="fastapi-swagger" src="https://github.com/user-attachments/assets/f1b6f086-27d5-4cc5-a773-4afb5ba1bfff" />
+
+### Test Suite
+<img width="1906" height="645" alt="tests-passing" src="https://github.com/user-attachments/assets/168537a4-9e98-44a9-96f2-181ea30a44b9" />
+
 ## Architecture
 
 ```text
