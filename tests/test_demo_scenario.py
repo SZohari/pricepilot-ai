@@ -32,9 +32,10 @@ def test_scenario_products_count_is_20():
     assert len(products) == 20
 
 
-def test_market_observations_have_at_least_three_per_product():
+def test_market_observations_count_is_80_and_at_least_three_per_product():
     observations = pd.read_csv(SCENARIO_DIR / "market_observations_template.csv")
     counts = observations.groupby("product_id").size()
+    assert len(observations) == 80
     assert counts.min() >= 3
     assert len(counts) == 20
 
@@ -76,7 +77,26 @@ def test_build_pipeline_produces_20_products_from_scenario(tmp_path):
     assert output_path.exists()
 
 
+def test_processed_scenario_output_has_no_nan_in_required_pricing_fields(tmp_path):
+    raw_dir = tmp_path / "raw"
+    output_path = tmp_path / "processed" / "dashboard_pricing_data.csv"
+    copy_demo_scenario(SCENARIO_DIR, raw_dir)
+
+    result = build_from_raw_dir(raw_dir, output_path)
+    required_fields = [
+        "usd_rate",
+        "theoretical_toman_price",
+        "market_min_price",
+        "market_median_price",
+        "market_max_price",
+        "our_current_price",
+        "our_cost_price",
+    ]
+
+    assert not result[required_fields].isna().any().any()
+
+
 def test_manual_usd_rate_parser_accepts_commas_and_persian_digits():
     assert parse_price_input("170000") == 170000
     assert parse_price_input("170,000") == 170000
-    assert parse_price_input("۱۷۰,۰۰۰") == 170000
+    assert parse_price_input("\u06f1\u06f7\u06f0,\u06f0\u06f0\u06f0") == 170000

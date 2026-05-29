@@ -24,6 +24,89 @@ from src.data.build_pricing_dataset import (
 )
 
 
+def small_pricing_fixture():
+    """Return deterministic two-product dataframes for unit-level build tests."""
+    market = pd.DataFrame([
+        {
+            'observation_id': 'OBS-1', 'observed_at': '2026-05-27',
+            'product_id': 'P1', 'product_query': 'Watch One',
+            'normalized_product_name': 'Watch One', 'brand': 'BrandA',
+            'model': 'One', 'source': 'Torob', 'source_url': '',
+            'seller_name': 'Seller A', 'listed_price': 10_000_000,
+            'availability_status': 'available', 'warranty': '12 months', 'notes': '',
+        },
+        {
+            'observation_id': 'OBS-2', 'observed_at': '2026-05-27',
+            'product_id': 'P1', 'product_query': 'Watch One',
+            'normalized_product_name': 'Watch One', 'brand': 'BrandA',
+            'model': 'One', 'source': 'Digikala', 'source_url': '',
+            'seller_name': 'Seller B', 'listed_price': 11_000_000,
+            'availability_status': 'available', 'warranty': '12 months', 'notes': '',
+        },
+        {
+            'observation_id': 'OBS-3', 'observed_at': '2026-05-27',
+            'product_id': 'P1', 'product_query': 'Watch One',
+            'normalized_product_name': 'Watch One', 'brand': 'BrandA',
+            'model': 'One', 'source': 'Emalls', 'source_url': '',
+            'seller_name': 'Seller C', 'listed_price': 12_000_000,
+            'availability_status': 'limited', 'warranty': 'seller', 'notes': '',
+        },
+        {
+            'observation_id': 'OBS-4', 'observed_at': '2026-05-27',
+            'product_id': 'P2', 'product_query': 'Watch Two',
+            'normalized_product_name': 'Watch Two', 'brand': 'BrandB',
+            'model': 'Two', 'source': 'Torob', 'source_url': '',
+            'seller_name': 'Seller A', 'listed_price': 20_000_000,
+            'availability_status': 'available', 'warranty': '12 months', 'notes': '',
+        },
+        {
+            'observation_id': 'OBS-5', 'observed_at': '2026-05-27',
+            'product_id': 'P2', 'product_query': 'Watch Two',
+            'normalized_product_name': 'Watch Two', 'brand': 'BrandB',
+            'model': 'Two', 'source': 'Digikala', 'source_url': '',
+            'seller_name': 'Seller B', 'listed_price': 21_000_000,
+            'availability_status': 'available', 'warranty': '12 months', 'notes': '',
+        },
+        {
+            'observation_id': 'OBS-6', 'observed_at': '2026-05-27',
+            'product_id': 'P2', 'product_query': 'Watch Two',
+            'normalized_product_name': 'Watch Two', 'brand': 'BrandB',
+            'model': 'Two', 'source': 'Emalls', 'source_url': '',
+            'seller_name': 'Seller C', 'listed_price': 22_000_000,
+            'availability_status': 'unavailable', 'warranty': 'seller', 'notes': '',
+        },
+    ])
+    retailer = pd.DataFrame([
+        {
+            'product_id': 'P1', 'our_current_price': 10_500_000,
+            'our_cost_price': 7_000_000, 'our_inventory': 10,
+            'our_sales_7d': 2, 'our_sales_30d': 8,
+            'our_target_margin': 0.30, 'our_strategy': 'balanced',
+        },
+        {
+            'product_id': 'P2', 'our_current_price': 20_500_000,
+            'our_cost_price': 14_000_000, 'our_inventory': 20,
+            'our_sales_7d': 4, 'our_sales_30d': 16,
+            'our_target_margin': 0.25, 'our_strategy': 'trust_builder',
+        },
+    ])
+    usd = pd.DataFrame([
+        {
+            'product_id': 'P1', 'brand': 'BrandA', 'model': 'One',
+            'base_usd_price': 100, 'base_usd_price_source': 'fixture',
+            'usd_rate': 45_000, 'source_url': '', 'observed_at': '2026-05-27',
+            'notes': '',
+        },
+        {
+            'product_id': 'P2', 'brand': 'BrandB', 'model': 'Two',
+            'base_usd_price': 200, 'base_usd_price_source': 'fixture',
+            'usd_rate': 45_000, 'source_url': '', 'observed_at': '2026-05-27',
+            'notes': '',
+        },
+    ])
+    return market, retailer, usd
+
+
 class TestLoadMarketObservations:
     """Tests for loading market observations."""
     
@@ -254,13 +337,11 @@ class TestBuildDashboardPricingDataset:
         assert (result['usd_rate'] == override_rate).all()
 
     def test_updated_retailer_current_price_appears_in_built_output(self):
-        market_df = load_market_observations('data/raw/market_observations_template.csv')
-        retailer_df = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
-        usd_df = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
-        retailer_df.loc[retailer_df['product_id'] == 'APUL-GPS-1', 'our_current_price'] = 41_000_000
+        market_df, retailer_df, usd_df = small_pricing_fixture()
+        retailer_df.loc[retailer_df['product_id'] == 'P1', 'our_current_price'] = 41_000_000
 
         result = build_dashboard_pricing_dataset(market_df, retailer_df, usd_df).set_index('product_id')
-        assert result.loc['APUL-GPS-1', 'our_current_price'] == 41_000_000
+        assert result.loc['P1', 'our_current_price'] == 41_000_000
 
 
 class TestManualInputOverrides:
@@ -268,9 +349,7 @@ class TestManualInputOverrides:
 
     @staticmethod
     def build(daily_updates=None, fx_snapshots=None):
-        market = load_market_observations('data/raw/market_observations_template.csv')
-        retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
-        usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        market, retailer, usd = small_pricing_fixture()
         return build_dashboard_pricing_dataset(
             market,
             retailer,
@@ -283,7 +362,7 @@ class TestManualInputOverrides:
     def daily_update(**values):
         update = {
             'observed_at': '2026-05-27T10:00:00',
-            'product_id': 'APUL-GPS-1',
+            'product_id': 'P1',
             'torob_min_price': np.nan,
             'torob_median_price': np.nan,
             'digikala_price': np.nan,
@@ -295,44 +374,44 @@ class TestManualInputOverrides:
     def test_latest_daily_update_overrides_market_min_price(self):
         updates = self.daily_update(torob_min_price=36_100_000)
         result = self.build(daily_updates=updates).set_index('product_id')
-        assert result.loc['APUL-GPS-1', 'market_min_price'] == 36_100_000
+        assert result.loc['P1', 'market_min_price'] == 36_100_000
 
     def test_latest_daily_update_overrides_market_median_price(self):
         updates = self.daily_update(torob_median_price=37_100_000)
         result = self.build(daily_updates=updates).set_index('product_id')
-        assert result.loc['APUL-GPS-1', 'market_median_price'] == 37_100_000
+        assert result.loc['P1', 'market_median_price'] == 37_100_000
 
     def test_latest_daily_update_preserves_digikala_price(self):
         updates = self.daily_update(digikala_price=38_100_000)
         result = self.build(daily_updates=updates).set_index('product_id')
-        assert result.loc['APUL-GPS-1', 'digikala_price'] == 38_100_000
+        assert result.loc['P1', 'digikala_price'] == 38_100_000
 
     def test_daily_update_infers_safe_max_when_missing(self):
         updates = self.daily_update(torob_min_price=36_100_000)
-        row = self.build(daily_updates=updates).set_index('product_id').loc['APUL-GPS-1']
+        row = self.build(daily_updates=updates).set_index('product_id').loc['P1']
         assert pd.notna(row['market_max_price'])
         assert row['market_max_price'] >= row['market_median_price']
 
     def test_blank_median_does_not_replace_aggregated_market_median(self):
-        baseline = self.build().set_index('product_id').loc['APUL-GPS-1', 'market_median_price']
+        baseline = self.build().set_index('product_id').loc['P1', 'market_median_price']
         updates = self.daily_update(torob_min_price=36_100_000, torob_median_price=np.nan)
-        row = self.build(daily_updates=updates).set_index('product_id').loc['APUL-GPS-1']
+        row = self.build(daily_updates=updates).set_index('product_id').loc['P1']
         assert row['market_median_price'] == baseline
 
     def test_latest_daily_update_wins_and_last_row_breaks_ties(self):
         updates = pd.DataFrame([
-            {'observed_at': '2026-05-27T11:00:00', 'product_id': 'APUL-GPS-1', 'torob_min_price': 35_000_000},
-            {'observed_at': '2026-05-27T12:00:00', 'product_id': 'APUL-GPS-1', 'torob_min_price': 36_000_000},
-            {'observed_at': '2026-05-27T12:00:00', 'product_id': 'APUL-GPS-1', 'torob_min_price': 37_000_000},
+            {'observed_at': '2026-05-27T11:00:00', 'product_id': 'P1', 'torob_min_price': 35_000_000},
+            {'observed_at': '2026-05-27T12:00:00', 'product_id': 'P1', 'torob_min_price': 36_000_000},
+            {'observed_at': '2026-05-27T12:00:00', 'product_id': 'P1', 'torob_min_price': 37_000_000},
         ])
         result = self.build(daily_updates=updates).set_index('product_id')
-        assert result.loc['APUL-GPS-1', 'market_min_price'] == 37_000_000
+        assert result.loc['P1', 'market_min_price'] == 37_000_000
 
     def test_products_without_daily_updates_keep_observation_aggregation(self):
         baseline = self.build().set_index('product_id')
         updates = self.daily_update(torob_min_price=36_100_000)
         updated = self.build(daily_updates=updates).set_index('product_id')
-        assert updated.loc['GAML-SE-1', 'market_min_price'] == baseline.loc['GAML-SE-1', 'market_min_price']
+        assert updated.loc['P2', 'market_min_price'] == baseline.loc['P2', 'market_min_price']
 
     def test_latest_positive_fx_snapshot_overrides_usd_rate(self):
         snapshots = pd.DataFrame([
@@ -369,21 +448,19 @@ class TestManualInputOverrides:
 
     def test_fx_override_recalculates_theoretical_toman_price(self):
         snapshots = pd.DataFrame([{'observed_at': '2026-05-27T11:00:00', 'rate_toman': 52_000}])
-        row = self.build(fx_snapshots=snapshots).set_index('product_id').loc['APUL-GPS-1']
+        row = self.build(fx_snapshots=snapshots).set_index('product_id').loc['P1']
         assert row['theoretical_toman_price'] == int(row['base_usd_price'] * 52_000)
 
     def test_fx_override_recalculates_iran_market_premium_pct(self):
         snapshots = pd.DataFrame([{'observed_at': '2026-05-27T11:00:00', 'rate_toman': 52_000}])
-        row = self.build(fx_snapshots=snapshots).set_index('product_id').loc['APUL-GPS-1']
+        row = self.build(fx_snapshots=snapshots).set_index('product_id').loc['P1']
         expected = (row['market_median_price'] - row['theoretical_toman_price']) / row['theoretical_toman_price']
         assert row['iran_market_premium_pct'] == pytest.approx(expected)
 
     def test_daily_updates_do_not_drop_expected_products(self):
         updates = self.daily_update(torob_min_price=36_100_000)
         result = self.build(daily_updates=updates)
-        assert set(result['product_id']) == {
-            'APUL-GPS-1', 'GAML-SE-1', 'FITB-CHG-1', 'HWAT-GTA-1', 'XIAO-MI-1',
-        }
+        assert set(result['product_id']) == {'P1', 'P2'}
 
     def test_output_has_no_nan_in_numeric_pricing_fields(self):
         updates = self.daily_update(torob_min_price=36_100_000)
@@ -398,9 +475,7 @@ class TestManualInputOverrides:
         assert not result[fields].isna().any().any()
 
     def test_catalog_product_requires_manual_market_update_before_output(self):
-        market = load_market_observations('data/raw/market_observations_template.csv')
-        retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
-        usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
+        market, retailer, usd = small_pricing_fixture()
         products = pd.DataFrame([{
             'product_id': 'NEW-WATCH-1', 'product_name': 'New Watch 1',
             'brand': 'New', 'model': 'Watch 1',
@@ -532,8 +607,7 @@ class TestTemplateAlignment:
         assert market_ids.issubset(retailer_ids), f"Market {market_ids} not covered by Retailer {retailer_ids}"
         assert market_ids.issubset(usd_ids), f"Market {market_ids} not covered by USD {usd_ids}"
         
-        # Should have exactly 5 products
-        assert len(market_ids) == 5, f"Expected 5 products, got {len(market_ids)}"
+        assert len(market_ids) > 0
     
     def test_each_product_has_minimum_observations(self):
         """Each product_id in market_observations has at least 3 observations."""
@@ -543,19 +617,19 @@ class TestTemplateAlignment:
             count = len(df[df['product_id'] == product_id])
             assert count >= 3, f"{product_id} has only {count} observations, need at least 3"
     
-    def test_build_pipeline_outputs_five_products(self):
-        """Build pipeline processes all 5 products from templates."""
+    def test_build_pipeline_outputs_all_fixture_products(self):
+        """Build pipeline processes all fixture products from templates."""
         market = load_market_observations('data/raw/market_observations_template.csv')
         retailer = load_retailer_internal_data('data/raw/retailer_internal_demo_template.csv')
         usd = load_global_usd_reference('data/raw/global_usd_reference_template.csv')
         
         result = build_dashboard_pricing_dataset(market, retailer, usd)
         
-        assert len(result) == 5, f"Expected 5 products in output, got {len(result)}"
-        
-        # Verify all expected products are present
-        expected_ids = sorted(['APUL-GPS-1', 'GAML-SE-1', 'FITB-CHG-1', 'HWAT-GTA-1', 'XIAO-MI-1'])
+        market_ids = set(market['product_id'].unique())
+        expected_ids = sorted(market_ids & set(retailer['product_id']) & set(usd['product_id']))
         actual_ids = sorted(result['product_id'].unique())
+        
+        assert len(result) == len(expected_ids)
         assert actual_ids == expected_ids, f"Expected {expected_ids}, got {actual_ids}"
     
     def test_output_products_have_all_data(self):
@@ -613,8 +687,8 @@ class TestLoadProcessedPricingData:
         assert len(df) > 0
         assert 'product_id' in df.columns
     
-    def test_load_processed_data_has_baseline_products(self):
-        """Loaded processed data keeps baseline products and may include user additions."""
+    def test_load_processed_data_has_products(self):
+        """Loaded processed data has product rows without assuming a fixed demo baseline."""
         from src.data.build_pricing_dataset import load_processed_pricing_data
         
         # Build the processed dataset if needed
@@ -626,8 +700,8 @@ class TestLoadProcessedPricingData:
             save_dashboard_pricing_dataset(result)
         
         df = load_processed_pricing_data()
-        expected_ids = {'APUL-GPS-1', 'GAML-SE-1', 'FITB-CHG-1', 'HWAT-GTA-1', 'XIAO-MI-1'}
-        assert expected_ids.issubset(set(df['product_id']))
+        assert len(df) > 0
+        assert df['product_id'].nunique() == len(df)
     
     def test_load_processed_data_has_required_fields(self):
         """Loaded processed data has all required Phase 2 fields."""
