@@ -1,48 +1,45 @@
 # PricePilot AI
 
-PricePilot AI is an explainable pricing decision-support dashboard for a smartwatch and wearable retailer operating in Iran's volatile retail market. It combines public market observations, internal store data, global USD price references, and exchange-rate snapshots to help a seller review competitive positioning and choose a pricing strategy.
+PricePilot AI is a market-aware pricing operations system for volatile retail markets. It helps retailers combine market observations, store costs, inventory, FX rates, and pricing strategy to generate explainable price recommendations.
 
-This project is intentionally human-in-the-loop: it assists pricing decisions, but does not automatically change store prices.
+The project is intentionally human-in-the-loop: it supports pricing decisions, but does not automatically change store prices.
 
-## Portfolio Links
+## Live Demo
 
-- [Case Study](docs/CASE_STUDY.md)
-- [Screenshot Guide](docs/SCREENSHOT_GUIDE.md)
-- [Phase 2 Design](docs/PHASE_2_DESIGN.md)
-- [Real Data Plan](docs/PHASE_3_REAL_DATA_PLAN.md)
+Streamlit demo:  
+https://pricepilot-ai.streamlit.app/
 
-## Features
-
-- Streamlit dashboard with recommendations, analytics, product detail views, and manual USD/Toman simulation
-- Six explainable pricing strategies for different retail goals
-- Readable Iranian toman entry with comma normalization, million-toman preview, and rial equivalent
-- Market Update Console for manually recording daily competitor prices
-- FX snapshot entry that recalculates theoretical toman prices after rebuilding
-- Add New Product workflow for maintaining product, store, and global reference records
-- Our Store Data workflow for updating current price, cost, inventory, sales, margin, and selected strategy
-- Processed Real Market Dataset mode backed by a reproducible CSV build pipeline
-- Lightweight FastAPI backend for recommendations, product lookup, and dataset builds
-- Defensive validation and automated test coverage for the data and recommendation workflow
+The public demo uses a packaged 20-product Iranian smartwatch/wearable scenario. It is realistic demo data, not live-scraped market data.
 
 ## Screenshots
 
 ### Overview
-<img width="2456" height="923" alt="overview" src="https://github.com/user-attachments/assets/cbda3dd0-2ad3-499c-9d08-1f625cb8f664" />
-
+![Overview](docs/screenshots/overview.png)
 
 ### Decision Center
-<img width="2531" height="937" alt="decision-center" src="https://github.com/user-attachments/assets/375adc08-4411-49bb-ab65-2f5b8229d0df" />
-
+![Decision Center](docs/screenshots/decision-center.png)
 
 ### Data Operations
-<img width="2145" height="847" alt="data-operations" src="https://github.com/user-attachments/assets/f8e5a770-5294-4659-8f06-b903c317d07d" />
-
+![Data Operations](docs/screenshots/data-operations.png)
 
 ### FastAPI Backend
-<img width="2522" height="941" alt="fastapi-swagger" src="https://github.com/user-attachments/assets/f1b6f086-27d5-4cc5-a773-4afb5ba1bfff" />
+![FastAPI Swagger](docs/screenshots/fastapi-swagger.png)
 
 ### Test Suite
-<img width="1906" height="645" alt="tests-passing" src="https://github.com/user-attachments/assets/168537a4-9e98-44a9-96f2-181ea30a44b9" />
+![Tests Passing](docs/screenshots/tests-passing.png)
+
+## Features
+
+- Guided Streamlit dashboard for pricing operations
+- 20-product Iranian smartwatch/wearable demo scenario
+- Manual USD/Toman FX rate control, defaulting to 170,000 toman
+- Decision-focused recommendations table and product-level analysis
+- Six deterministic pricing strategies
+- Market, store, FX, add-product, and dataset rebuild workflows
+- Raw-to-processed CSV pipeline for reproducible recommendations
+- FastAPI backend for local integration demos
+- Docker configuration for optional containerized runs
+- Automated test coverage for data, formatting, API, and pricing behavior
 
 ## Architecture
 
@@ -62,155 +59,93 @@ src/data/build_pricing_dataset.py
 data/processed/dashboard_pricing_data.csv
           |
           v
-src/pricing/ (recommendation, strategy, and risk modules)
-          |                         |
-          v                         v
-src/dashboard/app.py          src/api/main.py
+src/pricing/                 src/dashboard/app.py
+recommendation engine        Streamlit UI
+          |
+          v
+src/api/main.py
+FastAPI backend
 ```
 
-Key modules:
+## Demo Scenario Data
 
-| Path | Purpose |
-| --- | --- |
-| `src/dashboard/app.py` | Streamlit experience and assisted update forms |
-| `src/data/manual_entry.py` | Validated product, store, market, and FX persistence helpers |
-| `src/data/build_pricing_dataset.py` | Builds dashboard-ready product records |
-| `src/data/market_aggregation.py` | Aggregates public market observations |
-| `src/pricing/strategies.py` | Produces strategy-specific price candidates |
-| `src/pricing/recommendation.py` | Combines price, action, risk, and explanation output |
-| `src/api/main.py` | Thin FastAPI interface over dataset builds and recommendations |
+The packaged demo scenario lives in:
 
-## Pricing Strategies
-
-| Strategy | Intent |
-| --- | --- |
-| Trust Builder | Stay close to the low end of the market to build confidence and volume |
-| Balanced | Price near the market median while protecting margin |
-| Profit Protection | Favor margin preservation and theoretical replacement-cost signals |
-| Market Penetration | Compete aggressively to improve market share |
-| Premium Positioning | Maintain a higher-price market position |
-| Clearance / Cashflow | Support inventory reduction and cash recovery |
-
-The strategies are deterministic and explainable. Price changes remain subject to seller review.
-
-## How To Run
-
-Windows PowerShell:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe scripts\build_pricing_dataset.py
-.\.venv\Scripts\python.exe -m streamlit run src\dashboard\app.py
+```text
+data/scenarios/iran_smartwatch_demo_20/
 ```
 
-Open `http://localhost:8501` and select either sample data or **Processed Real Market Dataset** in the sidebar.
+It includes 20 realistic smartwatch and wearable products, fictional market observations, store cost/inventory data, and a demo FX snapshot. It is designed for portfolio presentation and workflow testing, not as live market intelligence.
 
-## Demo Scenario: Iranian Smartwatch Market
+Load the scenario locally:
 
-The repository includes a realistic demo scenario for an Iranian smartwatch and wearable retailer. It is not live scraped Iranian market data. It uses 20 wearable products, plausible global reference prices, fictional market observations, and an assumed exchange rate of 170,000 toman per USD.
-
-Use it when you want a richer portfolio demo than the small raw seed files:
-
-```powershell
+```bash
 python scripts/load_demo_scenario.py
-python scripts/build_pricing_dataset.py
+```
+
+## Local Streamlit Dashboard
+
+Install dependencies and run the dashboard:
+
+```bash
+python -m pip install -r requirements.txt
+python scripts/load_demo_scenario.py
 streamlit run src/dashboard/app.py
 ```
 
-After loading the scenario, choose **Processed Real Market Dataset** in the dashboard sidebar. The manual USD rate control can then be used to test how replacement cost affects recommendations.
+Open `http://localhost:8501`. The dashboard will also prepare the packaged demo dataset automatically if the processed CSV is missing.
 
-## FastAPI Backend
+## Local FastAPI Backend
 
-The Streamlit dashboard remains the user interface. A lightweight FastAPI service exposes the same existing dataset and recommendation functions for integration demos:
+The FastAPI backend is included in the repository and can be run locally. The public demo focuses on the Streamlit dashboard.
 
-- `GET /health` checks service availability.
-- `GET /products` returns product metadata from the processed dataset.
-- `POST /recommend-price` evaluates one product payload.
-- `POST /recommendations/batch` evaluates every processed dataset row.
-- `POST /build-dataset` runs the existing processed dataset build workflow.
+Run the API:
 
-Run the API from the project root:
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn src.api.main:app --reload
+```bash
+python -m uvicorn src.api.main:app --reload
 ```
 
-Interactive API documentation with typed request/response schemas and a recommendation example is available at `http://127.0.0.1:8000/docs`.
+Interactive API docs are available at:
 
-## Docker Usage
+```text
+http://127.0.0.1:8000/docs
+```
 
-Docker is optional. The local Python workflow above still works for development and demos.
+Main endpoints:
 
-Run the API and Streamlit dashboard together from the project root:
+- `GET /health`
+- `GET /products`
+- `POST /recommend-price`
+- `POST /recommendations/batch`
+- `POST /build-dataset`
 
-```powershell
+## Docker
+
+Docker configuration is included but optional.
+
+```bash
 docker compose up --build
 ```
 
-The containers share the project `data/` directory, so raw CSV updates and processed dataset builds remain available to both services.
-
-- API documentation: `http://localhost:8000/docs`
-- Dashboard: `http://localhost:8501`
-
-## Data Workflow
-
-The **Market Update** tab supports the operational demo workflow:
-
-1. Add a product, if it is not already in the catalog.
-2. Update our store data: current price, cost, inventory, sales, target margin, and strategy.
-3. Enter observed market prices for a selected product.
-4. Record the latest FX rate in toman.
-5. Click **Run Build Pipeline** or run the build script from PowerShell.
-6. Select **Processed Real Market Dataset** to review updated recommendations.
-
-Raw sources:
-
-| File | Contents |
-| --- | --- |
-| `data/raw/products_master.csv` | Product catalog, URLs, status, and priority |
-| `data/raw/market_observations_template.csv` | Detailed public observation baseline |
-| `data/raw/daily_market_updates.csv` | Manually recorded latest market prices |
-| `data/raw/retailer_internal_demo_template.csv` | Seller-owned price, cost, inventory, sales, and strategy data |
-| `data/raw/global_usd_reference_template.csv` | Base USD references per product |
-| `data/raw/fx_rate_snapshots.csv` | Saved exchange-rate snapshots |
-
-Output:
-
-```text
-data/processed/dashboard_pricing_data.csv
-```
-
-Daily updates override observed market aggregates only where values are provided. Latest valid FX snapshots override the reference exchange rate and trigger recalculation of `theoretical_toman_price` and `iran_market_premium_pct`.
-
-## No Scraping By Design
-
-This version does not scrape retailer sites. The first portfolio release emphasizes traceable inputs, explicit seller review, stable schemas, and compliance-friendly manual observation. Automated collection can be introduced later only where source terms, quality controls, and operational ownership are clear.
+This runs the API and Streamlit dashboard together using the shared project `data/` directory.
 
 ## Testing
 
-Run the complete test suite:
+Run the full test suite:
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest tests\ -v --tb=short
+```bash
+python -m pytest tests/ -v --tb=short
 ```
 
-Run the project verification and dashboard import checks:
+The tests cover pricing logic, data validation, manual entry helpers, dataset builds, scenario loading, formatting, and API behavior.
 
-```powershell
-.\.venv\Scripts\python.exe scripts\verify_project.py
-.\.venv\Scripts\python.exe -c "from src.dashboard import app; print('dashboard import ok')"
-```
+## Portfolio Links
 
-The automated tests cover formatting and Persian-digit inputs, market and FX persistence, product/store updates, dataset building, aggregation, and recommendation behavior.
-
-## Roadmap
-
-- Move raw CSV persistence to a database with audit history
-- Integrate a reliable live FX API
-- Add compliant, source-approved market data collectors
-- Explore ML forecasting once enough trustworthy historical observations exist
+- [Case Study](docs/CASE_STUDY.md)
+- [Screenshot Guide](docs/SCREENSHOT_GUIDE.md)
+- [Phase 2 Design](docs/PHASE_2_DESIGN.md)
+- [Real Data Plan](docs/PHASE_3_REAL_DATA_PLAN.md)
 
 ## Scope
 
-PricePilot AI is a portfolio MVP and decision-support tool, not an autonomous repricing system. Sample and manually entered values are intended for demonstration and analysis; a human seller remains responsible for any commercial price change.
+PricePilot AI is a portfolio MVP and decision-support tool, not an autonomous repricing system. It does not scrape retailer sites, call external market APIs, or claim live Iranian market coverage. A human seller remains responsible for any commercial price change.
