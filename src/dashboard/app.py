@@ -12,6 +12,11 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.sample_data_generator import load_sample_data
+from scripts.load_demo_scenario import (
+    DEFAULT_SCENARIO_DIR,
+    build_from_raw_dir,
+    copy_demo_scenario,
+)
 from src.data.build_pricing_dataset import (
     build_dashboard_pricing_dataset,
     load_global_usd_reference,
@@ -60,6 +65,7 @@ from src.utils.validation import get_column_info, validate_csv_columns, validate
 
 
 PROCESSED_DATASET_PATH = Path("data/processed/dashboard_pricing_data.csv")
+SCENARIO_DIR = DEFAULT_SCENARIO_DIR
 RAW_MARKET_PATH = "data/raw/market_observations_template.csv"
 RAW_PRODUCTS_PATH = "data/raw/products_master.csv"
 RAW_RETAILER_PATH = "data/raw/retailer_internal_demo_template.csv"
@@ -76,6 +82,35 @@ STRATEGY_LABELS = {
     "clearance_cashflow": "Clearance / Cashflow",
 }
 STRATEGY_KEYS = list(STRATEGY_LABELS.keys())
+PUBLIC_DATA_SOURCE_OPTIONS = ["Demo Scenario (20 Products)", "Upload CSV"]
+DEFAULT_PUBLIC_DATA_SOURCE = PUBLIC_DATA_SOURCE_OPTIONS[0]
+
+
+def processed_dataset_is_ready(processed_path: Path = PROCESSED_DATASET_PATH) -> bool:
+    """Return True when the processed dashboard dataset exists and has rows."""
+    processed_path = Path(processed_path)
+    if not processed_path.exists():
+        return False
+    try:
+        df = load_processed_pricing_data(str(processed_path))
+    except (FileNotFoundError, ValueError, pd.errors.EmptyDataError):
+        return False
+    return not df.empty and "product_id" in df.columns
+
+
+def prepare_demo_dataset(
+    processed_path: Path = PROCESSED_DATASET_PATH,
+    scenario_dir: Path = SCENARIO_DIR,
+    raw_dir: Path = Path("data/raw"),
+) -> pd.DataFrame:
+    """Ensure the packaged 20-product demo has a processed dataset."""
+    processed_path = Path(processed_path)
+    if processed_dataset_is_ready(processed_path):
+        return load_processed_pricing_data(str(processed_path))
+
+    copy_demo_scenario(Path(scenario_dir), Path(raw_dir))
+    build_from_raw_dir(Path(raw_dir), processed_path)
+    return load_processed_pricing_data(str(processed_path))
 
 
 def is_valid_source_link(link: str) -> bool:
@@ -139,25 +174,30 @@ def load_data_with_mode() -> tuple[pd.DataFrame | None, str]:
     """Load data from sample, processed real data, or uploaded CSV."""
     data_mode = st.sidebar.radio(
         "Data source",
-        options=[
-            "Sample Data (Generated)",
-            "Processed Real Market Dataset",
-            "Upload CSV",
-        ],
+        options=PUBLIC_DATA_SOURCE_OPTIONS,
         help="Choose the dataset used for recommendations.",
     )
+    with st.sidebar.expander("Advanced / Developer"):
+        use_sample_data = st.checkbox("Use Sample Data (Generated)", value=False)
 
-    if data_mode == "Processed Real Market Dataset":
-        st.sidebar.caption("Uses the latest built dataset from raw market, store, and FX updates.")
+    if use_sample_data:
+        st.sidebar.caption("Generated developer sample data.")
+        return load_sample_data(), "Sample Data (Generated)"
+
+    if data_mode == "Demo Scenario (20 Products)":
+        st.sidebar.caption(
+            "This public demo uses a packaged 20-product Iranian smartwatch scenario. "
+            "It is realistic demo data, not live scraped market data."
+        )
         try:
-            df = load_processed_pricing_data()
+            df = prepare_demo_dataset()
             st.sidebar.success(f"Loaded {len(df)} products.")
             return df, data_mode
-        except FileNotFoundError:
-            st.sidebar.warning("No processed dataset found.")
-            return None, data_mode
         except ValueError as exc:
             st.sidebar.error(f"Dataset validation failed: {exc}")
+            return None, data_mode
+        except Exception:
+            st.sidebar.error("Demo dataset could not be prepared. Please check scenario files.")
             return None, data_mode
 
     if data_mode == "Upload CSV":
@@ -191,8 +231,7 @@ def load_data_with_mode() -> tuple[pd.DataFrame | None, str]:
         st.sidebar.success(f"Loaded {len(df)} products.")
         return df, data_mode
 
-    st.sidebar.caption("Generated demo products for a quick walkthrough.")
-    return load_sample_data(), data_mode
+    return None, data_mode
 
 
 def render_sidebar(df: pd.DataFrame | None) -> tuple[pd.DataFrame | None, str | None, int | None, float, str]:
@@ -998,8 +1037,8 @@ def main() -> None:
 
     df, selected_strategy, manual_usd_rate, usd_shock, data_mode = render_sidebar(None)
     if df is None or df.empty:
-        if data_mode == "Processed Real Market Dataset":
-            st.warning("No processed dataset found. Go to Data Operations and build the dataset first.")
+        if data_mode == "Demo Scenario (20 Products)":
+            st.error("Demo dataset could not be prepared. Please check scenario files.")
         elif data_mode == "Upload CSV":
             st.info("Upload a CSV in the sidebar to review recommendations.")
         else:
