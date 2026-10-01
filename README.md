@@ -1,116 +1,140 @@
-# PricePilot — Pricing consultation and follow-up
+# PricePilot
 
-**A better price. A clearer next step.** The welcome page leads into a fictional German online watch shop. Import a catalog, inspect one order's costs, compare the actual offer, choose a bounded action and follow the observed result. Selected ideas from Hayek and Menger inform how the system treats local knowledge and uncertainty; [the economic foundations](docs/ECONOMIC_FOUNDATIONS.md) explain the interpretation and its limits.
+### A better price. A clearer next step.
 
-A **Data + AI + Business** MVP for a concrete business question: **what should I do about this price, and how will I know whether it helped?** It diagnoses costs, sales signals and capacity, proposes a bounded action, records what the owner actually did, and reviews the observed result against contribution and volume guardrails. The initial audience is Germany/EUR; the consultation supports repeatable goods and services. Commercial effectiveness has not yet been validated with merchants.
+**Turn product costs, market evidence and customer observations into a pricing decision you can explain—and a plan you can review.**
 
-**[Try the live demo](https://sepas.eu.pythonanywhere.com/)** — no installation or account needed. Explore the fictional shop, change its costs and record a pricing plan. Business data is simulated; each visitor gets a separate temporary workspace.
+PricePilot is an interactive **Data + AI + Business** MVP for independent retailers, demonstrated through a German online watch shop. It helps an owner decide whether to test a price, fix the offer or gather better evidence, while making the trade-off between sales and contribution visible.
 
-## Run the dashboard
+**[Open the live demo →](https://sepas.eu.pythonanywhere.com/)** · [Explore the method](docs/ECONOMIC_FOUNDATIONS.md) · [Read the model card](docs/MODEL_CARD.md)
 
-**Windows: double-click `Start PricePilot.cmd` in the project folder.** Keep the terminal window open. Your browser opens at **http://127.0.0.1:8000**. Close the terminal or press Ctrl+C to stop.
+[![Quality checks](https://github.com/SZohari/pricepilot-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/SZohari/pricepilot-ai/actions/workflows/tests.yml)
+![Python 3.12 / 3.13](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB)
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
+![Stage: interactive MVP](https://img.shields.io/badge/Stage-interactive%20MVP-cba77c)
 
-The launcher checks available Python environments, including the compatible runtime on this machine. A clean installation needs Python 3.12 and:
+[![PricePilot welcome page: a guided pricing routine for an independent shop](src/web/static/assets/images/pricepilot-preview.jpg)](https://sepas.eu.pythonanywhere.com/)
+
+*No installation or account needed. The shop is fictional; all bundled costs, prices, sales and competitor offers are simulated. Each visitor gets a separate temporary workspace.*
+
+## The business question
+
+**“A competitor is cheaper. Should I lower my price?”**
+
+A useful answer needs more than a price comparison. A discount reduces the amount left from each order. Extra sales only help if they make up that reduction—and the shop has enough stock to fulfil them. Sometimes the real problem is visibility, delivery or an offer that customers do not understand.
+
+PricePilot connects these questions in one guided routine:
+
+| Step | What the owner does | What becomes clear |
+| --- | --- | --- |
+| **01 · Your shop** | Choose a product and an acceptable sales-loss limit | The offer and the objective |
+| **02 · Costs & limits** | Review purchase/replacement costs, VAT, fees and fulfilment | What each sale leaves before fixed costs |
+| **03 · Market & customers** | Check comparable offers and add customer observations | Which evidence supports a change—and what is missing |
+| **04 · Choose a move** | Adjust a candidate price and inspect the consequences | Required sales, margin limits and capacity |
+| **05 · Your plan** | Save the action, record implementation and review results | What happened and whether the agreed limits were met |
+
+## See a decision take shape
+
+In the default watch example, a **€449.00** customer price leaves **€125.26** per sale before fixed costs. A 5% reduction to **€426.55** leaves **€106.78**. To preserve contribution and the chosen sales limit, the trial needs **at least 10 sales in 14 days**, compared with a recent pace of 8.4 over that period.
+
+Those 10 sales are a **required result**, not a demand forecast. If available stock cannot support the requirement, the system blocks the trial.
+
+![Pricing decision: current and candidate contribution, required sales, and editable price and volume limits](docs/screenshots/pricing-decision.jpg)
+
+**Try it yourself:** open the demo, choose **Build my pricing routine**, change the replacement cost, then compare a price reduction with an increase. Go back to customer context and select low visibility before using **Use the advisor’s next step**: the advice can change to investigating traffic before discounting.
+
+<details>
+<summary><strong>See the cost inputs behind the recommendation</strong></summary>
+
+![Costs and limits: separate purchase and replacement costs, delivery, packaging, returns reserve and the resulting margin floor](docs/screenshots/costs-and-limits.jpg)
+
+Cost edits recalculate a preview before confirmation. Changing an earlier input invalidates dependent steps, so a plan cannot silently rely on an outdated calculation.
+
+</details>
+
+## Built around business trade-offs
+
+- **Protect contribution and sales together.** Price trials must clear the chosen margin, volume and capacity limits. Contribution is the amount left after variable costs; it is not net profit.
+- **Compare the complete offer.** Delivered price, availability, evidence age and comparability matter. Stale or unavailable offers cannot silently drive a reduction.
+- **Give local knowledge a place.** Record an observation, hypothesis or open question about trust, delivery or customer needs. A question marked as essential pauses the price trial until reviewed.
+- **Make the next action usable.** Import CSV/TSV with mapping and preview, save a decision with its input snapshot, export a review sheet, and follow up using actual sales and costs.
+- **Automate supported evidence collection.** A configurable JSON-LD collector checks exact product URLs and streams results. Unsupported sources remain visible. No live retailer is preconfigured, and public visitors cannot add fetch URLs. [Collection setup →](docs/LIVE_COLLECTION.md)
+
+The design draws on selected ideas about local knowledge, subjective value and discovery: the owner's knowledge can change the decision, and a price remains a hypothesis to investigate. The [economic foundations](docs/ECONOMIC_FOUNDATIONS.md) connect those ideas to implemented behaviour and explain their limits.
+
+## Where machine learning fits
+
+The **Demand model lab** trains a ridge regression model to estimate next-day unit sales using price, competitor price, promotion, calendar patterns and recent sales. Training, model selection, error-band calibration and testing follow time order. Two simple baselines make the result interpretable.
+
+| Synthetic example · seed 73 | Model MAE ↓ | Best baseline MAE ↓ | Result |
+| --- | ---: | ---: | --- |
+| Stable conditions | 1.96 units | 3.29 units | Beats both baselines |
+| Unseen demand shock | 5.88 units | 2.99 units | Fails baseline comparison |
+
+Both cases are available in the live demo. The [five-seed report](docs/demand-evaluation.json) shows the same pass/fail pattern across all five seeds. These are synthetic evaluation results, not evidence of merchant ROI.
+
+<details>
+<summary><strong>See the live model evaluation</strong></summary>
+
+![Demand model evaluation with holdout predictions, baseline comparisons, time-ordered splits and explicit limitations](docs/screenshots/demand-evaluation.jpg)
+
+</details>
+
+The pricing consultant uses inspectable rules and Decimal accounting. The learned model is a separate research component: observational price associations do not establish causal elasticity, and it cannot publish a price. [Model design, validation and limitations →](docs/MODEL_CARD.md)
+
+## Under the hood
+
+**Python · FastAPI · Pydantic · NumPy · SQLite · native JavaScript modules**
+
+```text
+Browser workflow → Versioned API → Application services → Domain contracts
+                                      │                       │
+                                SQLite + audit         Decimal economics
+                                                       Demand evaluation
+```
+
+The UI and API share the same decision service. Version checks reject stale writes; saved plans retain their evidence and input fingerprint. The public demo isolates visitors' workspaces. No external AI API key or frontend build is required.
+
+[Architecture](docs/ARCHITECTURE.md) · [Advisor implementation](src/application/advisor.py) · [Demand model](src/domain/demand.py) · [Decision tests](tests/v1/test_advisor.py)
+
+## Run locally
+
+Use **Python 3.12 or 3.13**:
 
 ```bash
+git clone https://github.com/SZohari/pricepilot-ai.git
+cd pricepilot-ai
+python -m venv .venv
+# Activate: .venv\Scripts\activate on Windows; source .venv/bin/activate on macOS/Linux
 python -m pip install -r requirements-web.txt
 python run.py
 ```
 
-No Node build, Streamlit or PyArrow is needed for the new dashboard. If port 8000 is busy: `python run.py --port 8001`. API documentation: http://127.0.0.1:8000/docs.
+Open **http://127.0.0.1:8000**. On Windows, you can also double-click **`Start PricePilot.cmd`** after installing dependencies. Keep the terminal open; press Ctrl+C to stop. Use `python run.py --port 8001` if needed. API docs: **http://127.0.0.1:8000/docs**.
 
-Persian instructions: [RUN_ME_FA.md](RUN_ME_FA.md).
+[راهنمای اجرای فارسی](RUN_ME_FA.md) · [Hosting and demo status](docs/ONLINE_DEMO.md)
 
-## The interactive MVP
-
-The English welcome page introduces one fictional watch shop. Each scroll chapter has its own AI-generated editorial image. **Build my pricing routine** opens five guided steps: **Your shop → Costs & limits → Market & customers → Choose a move → Your plan**. Later steps unlock as the visitor reviews the earlier ones. [Guided setup](docs/GUIDED_SETUP.md) and [design/asset provenance](docs/HOMEPAGE_DESIGN.md).
-
-Start with a product and a sales-loss limit. Editing supplier or order costs updates a read-only preview and explains the change in money left per sale; confirmation saves the product. Review comparable offers and customer signals before seeing the advice. At the price step, compare current and proposed contribution and the sales required to meet both limits. These are conditions for a test, not predicted demand. Incomplete/failed updates cannot advance to a plan. **Product library** retains the detailed workspace and hypothetical supplier scenarios under the secondary tools.
-
-**Import products** accepts CSV/TSV with column mapping, explicit number format, shared or per-product settings, a row preview and all-or-nothing commit. Historical purchase cost, current replacement cost, VAT, gross/net fee basis, delivery, packaging, returns reserve and chosen margins have separate meanings. Existing SKUs are never silently overwritten. [Retail decision system and accounting](docs/RETAIL_DECISION_SYSTEM.md).
-
-In **Market & customers**, use **What might the numbers miss?** for a dated question, hypothesis or owner observation. Keep it as context or pause a price test until it is investigated. Each topic has an observation plan; update the finding as you learn. Exact competitor URLs can be connected and refreshed for that product in the same step. Welcome/resume navigation keeps the reviewed setup when moving between pages. The accounting boundary shows the sales a price would require, not a demand forecast. The economic method and ML evaluation remain directly accessible.
-
-Save the consultation as an action plan. A linked product test can export a CSV review sheet separating item price and customer delivery. This is a handoff sheet, not an automatic shop integration. For a price trial, record when you applied the price yourself, then enter actual sales and costs. The review checks contribution, sales volume and unit margin, normalizes for period length, and marks incomplete or confounded comparisons. A fictional case also lets visitors preview good, bad and confounded outcomes immediately, without creating fake business records. [Consultation method and limits](docs/PRICING_CONSULTANT.md).
-
-The market-gap chart shows the percentage difference between store price and delivered market median, with both prices visible. It does not imply demand or profit uplift. Decision labels and colors communicate different actions.
-
-## The workspace
-
-- **Your pricing setup:** five sequential steps, live input consequences and a reviewed action plan.
-- **Product library:** the detailed catalog/decision workspace under secondary tools.
-- **Import products:** preview-first CSV/TSV intake or detailed single-product entry, separate purchased/replacement costs and explicit fee bases.
-- **Pricing consultant:** business intake → diagnosis → bounded action → saved plan → observed follow-up. A reduction must earn enough additional sales to preserve contribution; an increase must also respect the owner's volume-loss limit. The figures are required outcomes, not forecasts.
-- **Price sandbox:** optional instant, reversible sensitivity analysis and comparison.
-- **Decision workbench:** a ranked review queue, financial/evidence checks, accept/reject/defer with reasons, immutable input snapshots and an exportable journal. Stale reviews are rejected; no shop price is changed.
-- **Demand model lab:** real supervised ridge training, temporal validation/calibration/test, two simple baselines, empirical error bands and an explicit demand-shock failure case. Upload a single-SKU daily JSON history or use the synthetic example.
-- **Store example:** a guided business case, market-gap chart, operational metrics and six decision stories.
-- **Competitor monitor:** a configured JSON-LD price collector, streamed source results, separate demo/live evidence and opt-in five-minute refresh. A local merchant consultation can connect exact product URLs and GTINs from the interface; public visitors cannot add fetch URLs.
-- **Pricing decisions:** searchable, filterable products, suggested prices, evidence coverage and detailed explanations.
-- **Product catalog:** 24 real wearable models across 10 brands, with official references.
-- **Scenario lab:** replacement-cost stress, six strategies and evidence-age/date controls. Simulations do not mutate inputs.
-- **Data workspace:** validated product edits, append-only observations, atomic JSON import/export and audit history.
-
-**All bundled prices, costs, sales, inventory and competitor offers are simulated.** Model names and official references are real; the dataset does not claim live availability, exact SKU specifications or current market prices. Generic watch illustrations are not product photographs. Reference date: 2026-09-26.
-
-The default demo is isolated by browser session. Edits survive page refresh, but reset after server restart or two hours of inactivity. **Export datasets and action plans separately to keep your work.** Dataset imports add new IDs; conflicting IDs reject the whole import. Saved plan exports are evidence records; this MVP does not restore an entire action journal from an export. Original Iran CSV files are preserved. Older retail policy tables and sensitivity tools remain under **Tools & project details**; they do not authorize the consultant's plans.
-
-## Live prices and a public link
-
-The generic collector requires exact GTINs and explicit delivery assumptions, reports unsupported sources and never disguises demo offers as live. No supported live retailer is preconfigured. A direct Decathlon check on 2026-09-27 was allowed by robots.txt but returned HTTP 403 for the product page; it imported no price. A configured source is not a promise of coverage. See [live collection setup](docs/LIVE_COLLECTION.md).
-
-The [public demo](https://sepas.eu.pythonanywhere.com/) runs on PythonAnywhere EU's free account, without a payment card. The public guided workflow, session isolation, CSV export and both ML examples were checked on 2026-10-01. Hosting remains an experimental ASGI service with free-account limits; no uptime guarantee is claimed. A Render Blueprint and minimal Docker deployment are also included. See [deployment status and verification](docs/ONLINE_DEMO.md) and [PythonAnywhere setup and limits](docs/PYTHONANYWHERE.md).
-
-## What the intelligence actually does
-
-The primary consultant is a versioned, deterministic decision service with Decimal unit economics. It can advise improving visibility, refreshing evidence, revising cost or scope, or running a small price trial. It does not optimize an invented elasticity curve. The older retail policy engine remains a comparison baseline. The separate **learned demand model** estimates one-day-ahead unit sales from price, competitor price, promotion, calendar patterns and recent sales; its coefficients are fitted to data. It cannot authorize a price change or prove a causal price effect.
-
-The default synthetic benchmark produces lower holdout error than both simple baselines; an unseen demand shock reverses that result. Both are visible rather than hiding failure. Neither result proves real-world accuracy, price elasticity or profit uplift. See the [model card](docs/MODEL_CARD.md) and [five-seed evaluation](docs/demand-evaluation.json).
-
-```text
-net revenue = gross price / (1 + VAT rate)
-percentage fee = fee rate * gross price [gross basis], or fee rate * net revenue [net basis]
-contribution = net revenue - percentage fee - replacement cost - variable cost
-contribution margin = contribution / net revenue
-```
-
-The demo's VAT assumption is 0.19. Costs are net; customer prices are gross. The fee basis is explicit: legacy demo products use net revenue; new retail intake starts with the editable gross-payment basis. These assumptions are explicit inputs, not a tax-compliance implementation. No measured demand, revenue or profit uplift is claimed. Suggestions are never automatically applied.
-
-## Architecture
-
-```text
-src/web/static/       Browser UI: native ES modules, CSS, accessible HTML
-src/web/app.py        FastAPI host, isolated demo sessions, write-token protection
-src/api/v1.py         Versioned API contracts and routes
-src/application/     Application services
-src/domain/          Validated contracts and Decimal pricing rules
-src/infrastructure/  SQLite repository, optimistic concurrency and audit
-```
-
-The browser consumes the same service as the API. CSS and application JavaScript are independent of pricing policy. The previous Streamlit adapter remains available at `src/dashboard/app.py` as an optional legacy UI.
-
-## Persistent local data
-
-```bash
-python -m scripts.load_german_demo --database data/workspaces/pricepilot.sqlite3
-```
-
-Set `PRICEPILOT_DB_PATH` to that absolute path before launching. The web interface is read-only in persistent mode. API writes require `PRICEPILOT_API_KEY` and the `X-API-Key` header. An empty database stays empty. This is a local development gate, not multi-user authentication.
-
-## Verification and reproducibility
+<details>
+<summary><strong>Run the checks and reproduce the evaluations</strong></summary>
 
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pytest
+node --test tests/web/*.test.mjs
 python -m scripts.evaluate --output docs/evaluation-baseline.json
 python -m scripts.evaluate_demand --output docs/demand-evaluation.json
-node --test tests/web/*.test.mjs
 ```
 
-The optional legacy Streamlit smoke test skips if a compatible PyArrow is unavailable. The primary web workspace has independent integration tests. See [dashboard delivery notes](docs/DASHBOARD_DELIVERY.md) for actual checks performed.
+CI runs Python 3.12/3.13 and the browser-logic tests. The legacy Streamlit smoke test may skip without compatible PyArrow; the primary FastAPI interface has its own integration tests.
 
-The catalog generator is `scripts/generate_demo_catalog.py`; it archives the old fictional demo once as `demo.synthetic-v1.json`. Regenerating the demo file does not reset a running or persistent workspace.
+</details>
 
-Project direction and limitations: [Project brief](PROJECT_BRIEF.md), [Architecture](docs/ARCHITECTURE.md), [Evaluation](docs/EVALUATION.md), [Roadmap](ROADMAP.md).
+## Scope and next milestone
 
-For buyers/reviewers: [commercial case and pilot scorecard](docs/PRODUCT_STRATEGY.md), [model card](docs/MODEL_CARD.md), [current delivery and remaining gaps](docs/CORE_UPGRADE.md).
+**Ready to explore as a portfolio MVP.** The consultation, import, review/export and ML evaluation workflows are implemented. Public demo work resets after server restart or two hours of inactivity; export datasets and plans separately to keep them. Hosting uses a free experimental ASGI service with availability limits.
+
+Commercial validation is still ahead: a scoped merchant pilot, reliable store/source integrations and measured decision outcomes. Cross-product substitution, customer retention, strategic competitor reactions and multi-period cash/inventory optimisation are not modelled. Store price changes remain a human action.
+
+The next milestone is one retailer, a small catalog and a reviewable pilot: measure time saved, evidence coverage and observed contribution/volume outcomes before expanding automation.
+
+[Business case & pilot](docs/PRODUCT_STRATEGY.md) · [Technical and business review](docs/READINESS_REVIEW.md) · [Roadmap](ROADMAP.md) · [Product & accounting details](docs/RETAIL_DECISION_SYSTEM.md)
