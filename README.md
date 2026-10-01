@@ -57,7 +57,7 @@ The default demo is isolated by browser session. Edits survive page refresh, but
 
 The generic collector requires exact GTINs and explicit delivery assumptions, reports unsupported sources and never disguises demo offers as live. No supported live retailer is preconfigured. A direct Decathlon check on 2026-09-27 was allowed by robots.txt but returned HTTP 403 for the product page; it imported no price. A configured source is not a promise of coverage. See [live collection setup](docs/LIVE_COLLECTION.md).
 
-A Render Blueprint and minimal Docker deployment are included. No public deployment has been performed: a hosting account/repository connection is still required. Visitors will need only the hosted URL, with no installation or signup. See [online demo deployment](docs/ONLINE_DEMO.md).
+A Render Blueprint and minimal Docker deployment are included. The current source is on GitHub and its release checks passed. **No verified public URL yet:** Render requested payment information even for its Free service; a free, card-free alternative is being evaluated. Visitors will need only the hosted URL, with no installation or signup. See [deployment status](docs/ONLINE_DEMO.md) and [PythonAnywhere setup and limits](docs/PYTHONANYWHERE.md).
 
 ## What the intelligence actually does
 

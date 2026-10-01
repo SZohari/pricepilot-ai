@@ -1,7 +1,7 @@
 # PricePilot launch kit
 
 Prepared 2026-10-01. This is a draft, not a published announcement. Replace the
-live-demo placeholder only after the Render deployment and public workflow pass.
+live-demo placeholder only after deployment and the public workflow pass.
 
 ## LinkedIn post — English
 
@@ -30,7 +30,7 @@ does not claim to discover an optimal price. The demo's business data is synthet
 real merchant validation is the next step.
 
 Try the interactive demo: [INSERT VERIFIED PUBLIC URL]
-Explore the code: https://github.com/SZOHARI/pricepilot-ai
+Explore the code: https://github.com/SZohari/pricepilot-ai
 
 I'm exploring opportunities at the intersection of data, applied AI and business
 in Germany. I'd welcome feedback from people building decision tools or working
@@ -60,13 +60,19 @@ workspace-token details. Start the public service before recording if it has sle
 
 ## Publication status
 
-- Source remote: `https://github.com/SZOHARI/pricepilot-ai.git`.
-- Public service configuration: Python, Frankfurt, Free, one worker, `/health`.
+- Source remote: `https://github.com/SZohari/pricepilot-ai.git`.
+- Implementation pushed to `main` in `2471663`; its GitHub Actions run passed.
+- Proposed Render configuration: Python, Frankfurt, Free, one worker, `/health`.
 - Local app: 1.7.0. Startup requires the local process to remain running.
 - A fresh Python 3.12.14 installation of the web dependencies and public-mode
   application/calculation smoke check passed on 2026-10-01. Render's Linux build
   and public workflow are separate checks, still pending.
-- No verified public URL yet. Render sign-in and GitHub write access are pending.
+- No verified public URL yet. Render's create-service API rejected the Free request
+  with HTTP 402 (payment information required). No service was created. The owner
+  requires free hosting without a card. PythonAnywhere EU is the next candidate;
+  account creation and deployment are pending. See [setup and limits](PYTHONANYWHERE.md).
+- Local regression checks: 553 Python tests passed, one optional legacy test
+  skipped; 80 JavaScript tests passed. No commercial outcome is implied.
 - Local browser audit is pending; the old unreachable tab returned a URL-policy
   error. Public Render's login page was successfully opened in the browser.
 - Do not publish the post with a placeholder, a localhost link or an untested URL.
