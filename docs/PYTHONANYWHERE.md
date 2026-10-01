@@ -1,14 +1,15 @@
-# PythonAnywhere EU deployment candidate
+# PythonAnywhere EU deployment
 
-Reviewed 2026-10-01. **Prepared, not deployed.** The owner requires a free account
+Deployed and checked 2026-10-01: **[Open PricePilot](https://sepas.eu.pythonanywhere.com/)**.
+The owner requires a free account
 without a payment card. Render's create-service API required payment information,
 so it did not create a service. PythonAnywhere EU's Beginner signup form has no
 payment fields, and its pricing page lists Beginner at EUR 0/month.
 
 This route runs the existing FastAPI application. It does not replace the pricing
 engine with a static mockup, and it does not require the owner's computer to stay on.
-Actual account eligibility and a successful free ASGI deployment must still be
-verified before sharing a demo link.
+The free account's deployment succeeded and the public application was exercised.
+See [the release checks](ONLINE_DEMO.md#checks-on-the-actual-public-service).
 
 ## Limits to check before announcing
 
@@ -59,13 +60,15 @@ must expand it when starting the app, not while creating the website.
 ```bash
 PRICEPILOT_DOMAIN='YOURUSERNAME.eu.pythonanywhere.com'
 ~/.virtualenvs/pricepilot/bin/pa website get
-~/.virtualenvs/pricepilot/bin/pa website create --domain "$PRICEPILOT_DOMAIN" --command "env PRICEPILOT_PUBLIC_DEMO=1 PRICEPILOT_ALLOWED_HOSTS=$PRICEPILOT_DOMAIN $HOME/.virtualenvs/pricepilot/bin/python -m uvicorn --app-dir $HOME/pricepilot-ai --uds \${DOMAIN_SOCKET} --workers 1 src.web.app:app"
+~/.virtualenvs/pricepilot/bin/pa website create --domain "$PRICEPILOT_DOMAIN" --command "/usr/bin/env PRICEPILOT_PUBLIC_DEMO=1 PRICEPILOT_ALLOWED_HOSTS=$PRICEPILOT_DOMAIN $HOME/.virtualenvs/pricepilot/bin/python -m uvicorn --app-dir $HOME/pricepilot-ai --uds \${DOMAIN_SOCKET} --workers 1 src.web.app:app"
 ```
 
 Do not set `PRICEPILOT_DB_PATH`: public mode refuses a merchant database. Public
 mode enables secure session cookies, so use HTTPS. The exact hostname is allowed;
 there is no need for a wildcard. FastAPI serves its own local CSS, JavaScript,
 images and fonts; the ASGI platform's missing static mappings are not required.
+The initial attempt with bare `env` failed because the process launcher did not
+resolve it through PATH. Using the confirmed `/usr/bin/env` path fixed startup.
 
 ## Verify the result
 

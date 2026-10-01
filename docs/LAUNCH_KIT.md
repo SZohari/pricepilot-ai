@@ -1,7 +1,7 @@
 # PricePilot launch kit
 
-Prepared 2026-10-01. This is a draft, not a published announcement. Replace the
-live-demo placeholder only after deployment and the public workflow pass.
+Prepared 2026-10-01. This is a draft, not a published announcement. The public
+workflow has been checked and the live link below is ready to use.
 
 ## LinkedIn post — English
 
@@ -29,7 +29,7 @@ The pricing workflow uses explicit accounting and decision rules. The ML model
 does not claim to discover an optimal price. The demo's business data is synthetic;
 real merchant validation is the next step.
 
-Try the interactive demo: [INSERT VERIFIED PUBLIC URL]
+Try the interactive demo: https://sepas.eu.pythonanywhere.com/
 Explore the code: https://github.com/SZohari/pricepilot-ai
 
 I'm exploring opportunities at the intersection of data, applied AI and business
@@ -62,17 +62,21 @@ workspace-token details. Start the public service before recording if it has sle
 
 - Source remote: `https://github.com/SZohari/pricepilot-ai.git`.
 - Implementation pushed to `main` in `2471663`; its GitHub Actions run passed.
-- Proposed Render configuration: Python, Frankfurt, Free, one worker, `/health`.
+  The subsequent deployment-documentation commit `0fa2605` also passed CI.
+- Public service: https://sepas.eu.pythonanywhere.com/ on PythonAnywhere EU,
+  Beginner (free), Python 3.13.1, one worker, public-demo mode, HTTPS.
 - Local app: 1.7.0. Startup requires the local process to remain running.
 - A fresh Python 3.12.14 installation of the web dependencies and public-mode
-  application/calculation smoke check passed on 2026-10-01. Render's Linux build
-  and public workflow are separate checks, still pending.
-- No verified public URL yet. Render's create-service API rejected the Free request
-  with HTTP 402 (payment information required). No service was created. The owner
-  requires free hosting without a card. PythonAnywhere EU is the next candidate;
-  account creation and deployment are pending. See [setup and limits](PYTHONANYWHERE.md).
+  application/calculation smoke check passed on 2026-10-01. The actual Linux host's
+  dependency check and the public browser workflow then passed too.
+- Render's create-service API rejected the Free request with HTTP 402 (payment
+  information required). No Render service or paid resource was created.
+  PythonAnywhere's free deployment succeeded. See [setup and limits](PYTHONANYWHERE.md).
 - Local regression checks: 553 Python tests passed, one optional legacy test
   skipped; 80 JavaScript tests passed. No commercial outcome is implied.
-- Local browser audit is pending; the old unreachable tab returned a URL-policy
-  error. Public Render's login page was successfully opened in the browser.
-- Do not publish the post with a placeholder, a localhost link or an untested URL.
+- The public browser audit covered cost changes, Welcome/Back navigation,
+  context-dependent advice, saving a plan, CSV download and both ML examples.
+  Separate visitor data and protected API writes were also checked.
+- The public page's social preview uses an actual screenshot. The site is an MVP;
+  live competitor coverage and merchant ROI have not been established.
+- No LinkedIn post or video has been published by this release task.

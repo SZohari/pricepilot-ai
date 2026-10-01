@@ -16,7 +16,7 @@ def package():
         if (ROOT/name).exists(): selected.append(name)
     assets = ROOT / "src/web/static/assets"
     selected.extend(str(p.relative_to(ROOT)) for p in assets.rglob("*")
-                    if p.is_file() and (p.suffix in (".webp", ".woff2") or p.name.endswith("-OFL.txt")))
+                    if p.is_file() and (p.suffix in (".webp", ".jpg", ".woff2") or p.name.endswith("-OFL.txt")))
     destination=ROOT/"dist/pricepilot-public-demo.zip"
     destination.parent.mkdir(exist_ok=True)
     with ZipFile(destination,"w",ZIP_DEFLATED) as archive:

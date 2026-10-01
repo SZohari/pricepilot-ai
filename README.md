@@ -4,6 +4,8 @@
 
 A **Data + AI + Business** MVP for a concrete business question: **what should I do about this price, and how will I know whether it helped?** It diagnoses costs, sales signals and capacity, proposes a bounded action, records what the owner actually did, and reviews the observed result against contribution and volume guardrails. The initial audience is Germany/EUR; the consultation supports repeatable goods and services. Commercial effectiveness has not yet been validated with merchants.
 
+**[Try the live demo](https://sepas.eu.pythonanywhere.com/)** — no installation or account needed. Explore the fictional shop, change its costs and record a pricing plan. Business data is simulated; each visitor gets a separate temporary workspace.
+
 ## Run the dashboard
 
 **Windows: double-click `Start PricePilot.cmd` in the project folder.** Keep the terminal window open. Your browser opens at **http://127.0.0.1:8000**. Close the terminal or press Ctrl+C to stop.
@@ -57,7 +59,7 @@ The default demo is isolated by browser session. Edits survive page refresh, but
 
 The generic collector requires exact GTINs and explicit delivery assumptions, reports unsupported sources and never disguises demo offers as live. No supported live retailer is preconfigured. A direct Decathlon check on 2026-09-27 was allowed by robots.txt but returned HTTP 403 for the product page; it imported no price. A configured source is not a promise of coverage. See [live collection setup](docs/LIVE_COLLECTION.md).
 
-A Render Blueprint and minimal Docker deployment are included. The current source is on GitHub and its release checks passed. **No verified public URL yet:** Render requested payment information even for its Free service; a free, card-free alternative is being evaluated. Visitors will need only the hosted URL, with no installation or signup. See [deployment status](docs/ONLINE_DEMO.md) and [PythonAnywhere setup and limits](docs/PYTHONANYWHERE.md).
+The [public demo](https://sepas.eu.pythonanywhere.com/) runs on PythonAnywhere EU's free account, without a payment card. The public guided workflow, session isolation, CSV export and both ML examples were checked on 2026-10-01. Hosting remains an experimental ASGI service with free-account limits; no uptime guarantee is claimed. A Render Blueprint and minimal Docker deployment are also included. See [deployment status and verification](docs/ONLINE_DEMO.md) and [PythonAnywhere setup and limits](docs/PYTHONANYWHERE.md).
 
 ## What the intelligence actually does
 
