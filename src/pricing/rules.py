@@ -6,7 +6,8 @@ from typing import List, Tuple
 
 def calculate_current_margin(current_price: float, cost_price: float) -> float:
     """
-    Calculate current profit margin.
+    Legacy cost markup (profit / cost), retained for historical fixtures.
+    The EUR domain uses contribution / net revenue instead.
     
     Args:
         current_price: Current selling price
@@ -119,7 +120,7 @@ def apply_pricing_rules(row: dict, usd_shock: float = 0.0) -> Tuple[float, List[
     recommended_price = max(recommended_price, min_required_price)
     
     # Round to clean retail price
-    recommended_price = round_to_retail_price(recommended_price)
+    recommended_price = max(round_to_retail_price(recommended_price), math.ceil(min_required_price / 10_000) * 10_000)
     
     return recommended_price, triggered_rules
 
@@ -146,7 +147,7 @@ def determine_action(current_price: float, recommended_price: float, risk_level:
     if abs(price_change_pct) < 0.02:
         return "hold_price"
     
-    if price_change_pct > 0.02:
+    if price_change_pct >= 0.02:
         return "increase_price"
     else:
         return "decrease_price"

@@ -41,7 +41,7 @@ def test_health_works():
     assert response.json() == {
         "status": "ok",
         "service": "PricePilot AI API",
-        "version": "0.1.0",
+        "version": "1.0.0",
     }
 
 
@@ -95,7 +95,8 @@ def test_build_dataset_returns_controlled_success(monkeypatch):
         lambda: (Path("data/processed/dashboard_pricing_data.csv"), dataset),
     )
 
-    response = client.post("/build-dataset")
+    monkeypatch.setenv("PRICEPILOT_API_KEY", "test-only-key")
+    response = client.post("/build-dataset", headers={"X-API-Key": "test-only-key"})
 
     assert response.status_code == 200
     assert response.json() == {

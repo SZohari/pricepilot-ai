@@ -1,90 +1,13 @@
-# Copilot Instructions
+# Project instructions
 
-You are working on a portfolio-grade data product called "Inflation-Aware Pricing Intelligence System".
+Read README.md, PROJECT_BRIEF.md and ROADMAP.md before changes.
 
-Before making changes, always read:
+PricePilot is a Germany/EUR retail decision-intelligence portfolio project spanning Data, AI and Business. Keep claims honest: deterministic operational pricing, a separate trained ridge demand lab, synthetic bundled history, no measured merchant profit uplift. Learned models cannot authorize live repricing.
 
-- PROJECT_BRIEF.md
-- ROADMAP.md
-- README.md
+New functionality belongs in src/domain, src/application, src/infrastructure and the versioned /api/v1 surface. UI code calls application services. Use Decimal for money, explicit gross/net field names and contribution / net revenue for margins.
 
-## Main Goal
+Preserve historical Iran CSV data and compatibility tests. Never automatically seed over a persistent workspace. Validate imports before transactional writes. Product edits must retain optimistic version checks.
 
-Build a lightweight pricing intelligence dashboard for volatile retail markets, initially focused on smartwatches in Iran.
+Keep the implementation understandable. Do not add heavy ML stacks, distributed services or autonomous repricing without a concrete task and evidence. The future frontend must reuse the same API/domain contracts.
 
-This is an MVP, not a full SaaS product.
-
-## Development Principles
-
-- Keep the project simple and understandable.
-- Prefer readable code over complex abstractions.
-- Do not introduce heavy frameworks unless requested.
-- Do not add LangGraph, PyTorch, Docker, or Next.js in the MVP unless explicitly asked.
-- Start with Python, Pandas, Scikit-learn, Streamlit, and SQLite.
-- Every pricing recommendation must be explainable.
-- Business logic should be separated from UI code.
-- Avoid hardcoding logic directly inside Streamlit components.
-- Keep functions small and testable.
-
-## Suggested Project Structure
-
-```txt
-src/
-  data/
-    load_data.py
-    sample_data_generator.py
-  pricing/
-    rules.py
-    recommendation.py
-    risk.py
-  features/
-    feature_engineering.py
-  dashboard/
-    app.py
-  utils/
-    formatting.py
-
-data/
-  raw/
-  processed/
-
-notebooks/
-docs/
-tests/
-Coding Style
-Use type hints where useful.
-Use clear function names.
-Add docstrings for business-critical functions.
-Avoid unnecessary comments.
-Do not over-engineer.
-Prefer deterministic rule-based logic before adding machine learning.
-Pricing Logic Requirements
-
-The recommendation engine should consider:
-
-current price
-cost price
-target margin
-inventory level
-competitor median price
-exchange-rate change
-recent sales
-conversion rate
-Output Format
-
-Each pricing recommendation should return:
-
-product_id
-product_name
-current_price
-recommended_price
-action
-risk_level
-expected_margin
-explanation
-triggered_rules
-Safety Rules
-
-Do not implement automatic real-world price changes.
-Do not scrape websites unless a specific task asks for it.
-Do not store API keys or secrets in the repository.
+Run the relevant regression tests and the scenario evaluation. Add tests for financial invariants and data-loss/concurrency risks. Do not claim checks that were not executed.

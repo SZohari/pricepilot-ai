@@ -1,3 +1,5 @@
+> Historical Iran MVP document. For the current Germany/EUR implementation, see the root README and docs/ARCHITECTURE.md. Old screenshots and test counts do not describe the new version.
+
 # Bug Fix Summary: KeyError in Dashboard
 
 ## Problem

@@ -1,0 +1,62 @@
+/* The default experience is one guided commercial decision, not a tool index. */
+.navigation-more {margin-top:22px;border-top:1px solid #263246;padding-top:10px}
+.navigation-more summary {font-size:11px;color:#9caec8;padding:12px;cursor:pointer;list-style-position:inside}
+.navigation-more .nav-link {font-size:11px;padding:10px 12px}
+.guide-heading {display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin:5px 0 26px}
+.guide-heading h1 {font-size:clamp(26px,2.5vw,35px);line-height:1.25;letter-spacing:-1.1px;margin:11px 0}
+.guide-heading p {font-size:13px;color:#9eb0c9;line-height:1.7;margin:0}
+.guide-heading>.pill {flex-shrink:0;margin-top:12px}
+.guide-steps {display:flex;gap:35px;margin:28px 0;color:#adbbce;font-size:12px}
+.guide-steps span {display:flex;align-items:center;gap:9px}
+.guide-steps b {display:grid;place-items:center;width:25px;height:25px;border:1px solid #514667;border-radius:50%;background:#252139;color:#d2bcff;font-size:11px}
+.guide-controls {display:grid;grid-template-columns:minmax(240px,.8fr) minmax(320px,1.2fr);gap:25px;padding:24px;align-items:end}
+.guide-controls .field {margin:0}
+.guide-controls select {font-size:14px;min-height:43px;width:100%}
+.guide-priorities {border:0;margin:0;padding:0;display:flex;gap:6px;min-width:0}
+.guide-priorities legend {font-size:12px;color:#a6b6cb;margin-bottom:12px}
+.guide-priorities button {background:#1b2739;color:#aabbd3;border:1px solid #34455f;border-radius:7px;padding:11px 12px;font-size:11px;flex:1;cursor:pointer;line-height:1.35}
+.guide-priorities button[aria-pressed=true] {background:#cbbaff;color:#21192f;border-color:#dacdff;font-weight:650}
+.guide-priorities button:focus-visible,.guide-next .button:focus-visible {outline:2px solid #dfd1ff;outline-offset:3px}
+.guide-context {display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:24px 6px}
+.guide-context span {display:block;font-size:11px;color:#8fa1ba;margin-bottom:8px}
+.guide-context strong {font-size:18px;font-weight:550;color:#d6e1f1}
+.guide-advice {display:grid;grid-template-columns:1fr auto;gap:30px;border:1px solid #615780;border-radius:13px;padding:28px;background:linear-gradient(105deg,#242137,#1a2234)}
+.guide-advice h2 {font-size:25px;line-height:1.3;margin:12px 0;color:#e8e2f7;font-weight:550;letter-spacing:-.6px}
+.guide-advice p {font-size:13px;line-height:1.75;color:#b8c4d7;max-width:650px;margin:0}
+.guide-advice .guide-evidence {font-size:11px;color:#a496bf;margin-top:14px}
+.guide-advice.needs-data {border-color:#886c48;background:linear-gradient(105deg,#302a25,#1b2331)}
+.guide-advice.needs-data h2 {color:#f1d1ab}
+.guide-price {display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:10px;min-width:160px}
+.guide-price small {font-size:12px;color:#b1a2cf}
+.guide-price strong {font-size:35px;font-weight:550;color:#dac9ff;letter-spacing:-.8px;white-space:nowrap}
+.guide-price span {font-size:11px;color:#acb8ce}
+.guide-section-title {margin:30px 0 17px}
+.guide-section-title h2 {font-size:19px;font-weight:550;margin:0 0 9px}
+.guide-section-title p {font-size:12px;color:#95a7c2;margin:0;line-height:1.6}
+.guide-option-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:15px}
+.guide-option {padding:20px;min-width:0}
+.guide-option.chosen {border-color:#a28ace;background:#1c2235;box-shadow:inset 0 2px #b29ada}
+.guide-option-top {display:flex;flex-direction:column;gap:9px;align-items:flex-start;min-height:45px;font-size:12px;color:#aebdd2}
+.guide-option-top .pill {font-size:9px}
+.guide-option h3 {font-size:27px;margin:12px 0 22px;font-weight:550}
+.guide-option dl {margin:0}
+.guide-option dl>div {margin:14px 0}
+.guide-option dt {font-size:11px;color:#8e9fbb;margin-bottom:7px}
+.guide-option dd {font-size:17px;color:#d9e2ef;margin:0;font-variant-numeric:tabular-nums;line-height:1.4}
+.guide-option-note {border-top:1px solid #33405a;padding-top:13px;margin:18px 0 0;font-size:11px;line-height:1.6;color:#adbcce}
+.guide-assumption {font-size:11px;line-height:1.85;color:#9babc2;margin:15px 0 0;max-width:1050px}
+.guide-assumption strong {color:#c5b6df}
+.guide-next {display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;margin-top:24px;padding:24px}
+.guide-next h3 {font-size:16px;margin:0 0 12px}
+.guide-next p {font-size:12px;line-height:1.8;color:#aabbd2;margin:0;max-width:730px}
+.guide-next small {display:block;color:#8198b8;font-size:10px;margin-top:10px;line-height:1.6}
+.guide-next-actions {display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.guide-advanced {margin:24px 0}
+.guide-advanced>summary {margin:0;padding:18px 24px;font-size:12px}
+.guide-advanced-body {padding:0 24px 15px}
+.guide-advanced .field {max-width:400px}
+.guide-advanced p {font-size:12px;color:#9dafc7;line-height:1.7}
+@media(max-width:1200px){.guide-controls{grid-template-columns:1fr;gap:20px}.guide-option dd{font-size:15px}}
+@media(max-width:800px){.guide-heading{flex-direction:column;gap:10px}.guide-heading>.pill{margin:0}.guide-steps{gap:15px;font-size:10px}.guide-advice{gap:15px;padding:22px}.guide-advice h2{font-size:23px}.guide-price strong{font-size:28px}.guide-next{grid-template-columns:1fr;gap:20px}.guide-next-actions{flex-direction:row;flex-wrap:wrap}}
+@media(max-width:600px){.guide-controls{padding:19px}.guide-priorities button{padding:10px 6px;font-size:10px}.guide-steps{align-items:flex-start;gap:10px}.guide-steps span{flex:1;flex-direction:column;align-items:flex-start;line-height:1.6}.guide-context{grid-template-columns:1fr 1fr;gap:20px}.guide-advice{grid-template-columns:1fr}.guide-price{align-items:flex-start;border-top:1px solid #47405e;padding-top:18px}.guide-option-grid{grid-template-columns:1fr}.guide-option-top{min-height:0;flex-direction:row;justify-content:space-between}.guide-option dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.guide-option h3{margin:15px 0}.guide-option dl>div{margin:7px 0}.guide-next-actions .button{flex:1;justify-content:center}}
+.guide-tolerance{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:10px;color:#aebed4;font-size:12px;border-top:1px solid #2a374c;padding-top:18px}.guide-tolerance output{color:#d1baff;font-weight:600}.guide-tolerance input{grid-column:1/-1;width:100%;accent-color:#c6adff;cursor:pointer;max-width:100%}.guide-tolerance small{grid-column:1/-1;font-size:10px;color:#8f9fb9}

@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "images": [
+    {
+      "name": "journey-stock",
+      "prompt": "Use case: photorealistic-natural. Create one premium editorial photograph for a step-by-step pricing assistant for a fictional German online smartwatch retailer. Landscape 1536x1024. Warm charcoal and muted olive interior, copper sunlight, natural tactile materials, thoughtful independent shop, believable proportions, cinematic but authentic. No readable text, no logos, no watermark, no graphics or dashboards superimposed. It must work as a wide webpage photo crop. Stage ONE: organizing the business data. Overhead three-quarter still life of a wooden stockroom desk: three generic unbranded smartwatches on simple product trays, small cardboard stock boxes, a closed-order ledger with indistinct writing, a barcode scanner beside a laptop keyboard, retailer's hand moving one watch box into order. Capture practical inventory and getting organized. Keep main objects in central horizontal band. Rich warm shadow, fine texture, no charts."
+    },
+    {
+      "name": "journey-compare",
+      "prompt": "Use case: photorealistic-natural. Create one premium editorial photograph for a step-by-step pricing assistant for a fictional German online smartwatch retailer. Landscape 1536x1024. Warm charcoal and muted olive interior, copper sunlight, natural tactile materials, thoughtful independent shop, believable proportions, cinematic but authentic. No readable text, no logos, no watermark, no graphics or dashboards superimposed. It must work as a wide webpage photo crop. Stage TWO: understanding the price decision. Close editorial desk view with two distinct generic smartwatches, one round and one rectangular, laid neatly side by side on dark olive felt; an open plain notebook and a modest brass calculator beside them, retailer's hands thoughtfully comparing the actual products. Focus on product comparison and considered choice, not packing or stock shelving. Shallow depth of field, angled daylight, restrained still life, entirely unreadable notebook marks."
+    },
+    {
+      "name": "journey-review",
+      "prompt": "Use case: photorealistic-natural. Create one premium editorial photograph for a step-by-step pricing assistant for a fictional German online smartwatch retailer. Landscape 1536x1024. Warm charcoal and muted olive interior, copper sunlight, natural tactile materials, thoughtful independent shop, believable proportions, cinematic but authentic. No readable text, no logos, no watermark, no graphics or dashboards superimposed. It must work as a wide webpage photo crop. Stage THREE: following through and reviewing the result. Medium wide candid view of a small online retailer in an olive overshirt working at a laptop by a warmly lit window, two neatly packed unbranded watch orders and one generic watch on the desk, open plain notebook at their side. Quiet confidence and an organized working day, no celebration or implied financial success. Distinct scene from close-up watches or stock cataloging. Screen content out of focus, no visible numbers or logos, natural face and anatomy."
+    }
+  ]
+}

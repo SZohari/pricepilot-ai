@@ -1,5 +1,6 @@
 """Data validation utilities for CSV import."""
 
+import math
 import pandas as pd
 from typing import Tuple, List
 
@@ -76,6 +77,22 @@ def validate_csv_data(df: pd.DataFrame) -> Tuple[bool, List[str]]:
         issues.append("CSV file is empty")
         return False, issues
     
+    # Reject nonnumeric and nonfinite values before any comparisons.
+    numeric_columns = {**REQUIRED_COLUMNS, **OPTIONAL_COLUMNS}
+    df = df.copy()
+    for column, dtype in numeric_columns.items():
+        if column in df.columns and dtype in (int, float):
+            converted = pd.to_numeric(df[column], errors="coerce")
+            if converted.isna().any() or not converted.map(math.isfinite).all():
+                issues.append(f"Column '{column}' must contain finite numbers")
+            df[column] = converted
+    if issues:
+        return False, issues
+    if "product_id" in df.columns and (df["product_id"].isna().any() or df["product_id"].duplicated().any()):
+        issues.append("product_id must be present and unique")
+    if all(column in df.columns for column in ["market_min_price", "market_median_price", "market_max_price"]):
+        if ((df["market_min_price"] > df["market_median_price"]) | (df["market_median_price"] > df["market_max_price"])).any():
+            issues.append("Market prices must satisfy min <= median <= max")
     # Check for negative prices (Phase 2 schema)
     price_cols = [
         "base_usd_price", "theoretical_toman_price",

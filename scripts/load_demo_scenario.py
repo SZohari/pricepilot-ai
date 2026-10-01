@@ -51,6 +51,13 @@ def copy_demo_scenario(
     raw_dir = Path(raw_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
+    destinations = [raw_dir / name for name in SCENARIO_FILES] + [raw_dir / "daily_market_updates.csv"]
+    existing = [str(path) for path in destinations if path.exists()]
+    if existing:
+        raise ValueError("Refusing to overwrite existing raw data: " + ", ".join(existing))
+    missing = [name for name in SCENARIO_FILES if not (scenario_dir / name).exists()]
+    if missing:
+        raise FileNotFoundError("Scenario files missing: " + ", ".join(missing))
     copied = {}
     for file_name in SCENARIO_FILES:
         source = scenario_dir / file_name

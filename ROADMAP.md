@@ -1,55 +1,42 @@
-# Product Roadmap
+# Product and engineering roadmap
 
-## Phase 1: MVP (Current)
+## Implemented foundation
+- [x] Germany/EUR product framing and synthetic scenario
+- [x] Explicit gross/net and contribution-margin model
+- [x] Decimal money and safe floors for all six strategies
+- [x] Quality gates, missing-evidence abstention and cost stress scenarios
+- [x] UI-independent domain/application layers
+- [x] Transactional SQLite and optimistic product edits
+- [x] Versioned API with full decision evidence
+- [x] Modular Streamlit decision/data workspaces
+- [x] Regression tests, application smoke tests and CI definition
+- [x] Reproducible synthetic policy evaluation
+- [x] Historical Iran data preserved separately
 
-- [x] Project structure
-- [x] Sample data generator
-- [x] Rule-based pricing engine
-- [x] Risk scoring
-- [x] Recommendation engine
-- [x] Streamlit dashboard
-- [x] USD shock simulator
-- [x] Tests
+## Next: evidence and usability
+- [ ] Interview potential retail users and validate the decision workflow
+- [ ] Obtain permissioned, dated offer and sales data
+- [ ] Evaluate missingness, SKU/variant matching and source bias
+- [ ] Measure review time, decision acceptance and explanation comprehension
+- [x] Record explicit accept/reject/defer decisions, reasons and reproducible snapshots
+- [ ] Usability test and iterate on the UX direction
 
-## Phase 2: Data & ML
+## Next: AI with evaluation
+- [x] Validated single-SKU daily history contract, synthetic generator and JSON upload evaluation
+- [x] Compare naive/seasonal sales baselines with a trained ridge demand model
+- [x] Chronological train/validation/calibration/test; error and coverage reports across five synthetic seeds and an unseen shock
+- [ ] Real-data multi-window rolling evaluation, segment diagnostics and forward shadow operation
+- [x] Separate predictive accuracy from causal price elasticity and operational pricing
+- [ ] Add a model-backed policy only after it beats the policy baseline on agreed metrics
+- [ ] Keep guardrails and abstention independent of model choice
 
-- [ ] Real CSV data import/export
-- [ ] Historical price tracking
-- [ ] Sales trend analysis
-- [ ] Demand forecasting (simple linear regression)
-- [ ] Price elasticity estimation
-- [ ] A/B test framework
+## Next: product scale
+- [x] Dedicated interactive browser frontend using /api/v1 contracts
+- [ ] PostgreSQL adapter and explicit migration tooling
+- [ ] Authentication, tenant isolation and authorization for persistent web use
+- [ ] Background ingestion jobs, source monitoring and operational telemetry
+- [x] Versioned policy/input snapshots and review outcomes
+- [ ] Link reviews to actual applied prices and measured merchant outcomes
+- [ ] Controlled merchant pilot before any operational automation
 
-## Phase 3: Monitoring & Alerts
-
-- [ ] Price alert system
-- [ ] Margin trend alerts
-- [ ] Competitor price change detection
-- [ ] Inventory warning system
-- [ ] Report generation (PDF/Excel)
-
-## Phase 4: Multi-Market & API
-
-- [ ] Support for multiple product categories
-- [ ] Multi-seller scenarios
-- [ ] REST API for integrations
-- [ ] Webhook notifications
-- [ ] Basic authentication
-
-## Phase 5: Advanced Features
-
-- [ ] FastAPI backend
-- [ ] PostgreSQL database
-- [ ] Next.js web interface
-- [ ] Mobile app
-- [ ] Advanced ML models
-- [ ] LangGraph agent system
-
-## Not In Scope (MVP)
-
-- Automatic real-world price changes
-- Large-scale web scraping
-- Complex deep learning
-- Enterprise SaaS features
-- Docker deployment
-- Multi-database support
+No immediate need for microservices, autonomous agents or a heavy model stack. Add complexity when user evidence or load requires it.

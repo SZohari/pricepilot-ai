@@ -1,0 +1,11 @@
+[
+  {
+    "source_id": "retailer-a-exact-variant",
+    "product_id": "DE-WEAR-001",
+    "seller": "REPLACE_WITH_RETAILER_NAME",
+    "url": "https://example.invalid/exact-product-variant",
+    "expected_gtin": "REPLACE_WITH_VERIFIED_GTIN",
+    "shipping_gross": "4.99",
+    "shipping_note": "REPLACE: delivery to Germany, verified on YYYY-MM-DD"
+  }
+]

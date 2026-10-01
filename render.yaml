@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: pricepilot-mvp
+    runtime: python
+    plan: free
+    region: frankfurt
+    autoDeployTrigger: "off"
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: python -m uvicorn src.web.app:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: PRICEPILOT_PUBLIC_DEMO
+        value: "1"

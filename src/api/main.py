@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from src.api.v1 import router as retail_router, require_writer
+from src.api.intelligence import router as intelligence_router
+from src.api.advisor import router as advisor_router
 
 from src.data.build_pricing_dataset import (
     build_dashboard_pricing_dataset,
@@ -32,9 +35,9 @@ from src.pricing.recommendation import recommend_price
 
 
 app = FastAPI(
-    title="PricePilot AI API",
-    description="Market-aware pricing operations API for volatile retail markets.",
-    version="0.1.0",
+    title="PricePilot Retail Decision Intelligence",
+    description="Germany / EUR retail decisions. Use /api/v1; unversioned endpoints retain the historical Iran contract.",
+    version="1.0.0",
     openapi_tags=[
         {"name": "Health", "description": "Service availability checks."},
         {"name": "Products", "description": "Processed product catalog access."},
@@ -42,6 +45,11 @@ app = FastAPI(
         {"name": "Dataset", "description": "Processed dataset build operations."},
     ],
 )
+
+
+app.include_router(retail_router)
+app.include_router(intelligence_router)
+app.include_router(advisor_router)
 
 
 def _records_for_recommendation(df: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -106,7 +114,7 @@ def recommendation(payload: RecommendationRequest) -> Dict[str, Any]:
     """Produce one recommendation using the existing pricing engine."""
     try:
         return recommend_price(payload.model_dump(exclude_none=True))
-    except (TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -132,6 +140,8 @@ def batch_recommendations() -> Dict[str, Any]:
 
 @app.post(
     "/build-dataset",
+    dependencies=[Depends(require_writer)],
+    deprecated=True,
     response_model=BuildDatasetResponse,
     tags=["Dataset"],
     summary="Build the processed pricing dataset",

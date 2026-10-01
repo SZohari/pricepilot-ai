@@ -287,6 +287,13 @@ def build_dashboard_pricing_dataset(
     if len(market_agg) == 0:
         raise ValueError("No products found after aggregating market observations")
     
+    # Fail explicitly rather than silently dropping products or multiplying duplicate keys.
+    for label, frame in [("USD reference", usd_df), ("retailer", retailer_df)]:
+        if frame["product_id"].isna().any() or frame["product_id"].duplicated().any():
+            raise ValueError(label + " product IDs must be present and unique")
+        missing = set(market_agg["product_id"]) - set(frame["product_id"])
+        if missing:
+            raise ValueError(label + " is missing product IDs: " + ", ".join(sorted(missing)))
     # Step 2: Merge with USD reference data
     merged = market_agg.merge(
         usd_df,
@@ -416,7 +423,22 @@ def save_dashboard_pricing_dataset(
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     
-    df.to_csv(output_file, index=False)
+    # Atomic publication avoids readers seeing a partially written CSV.
+    import os
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", dir=output_file.parent,
+                                     encoding="utf-8", newline="", delete=False) as handle:
+        temporary = Path(handle.name)
+        try:
+            df.to_csv(handle, index=False)
+        except Exception:
+            handle.close()
+            temporary.unlink(missing_ok=True)
+            raise
+    try:
+        os.replace(temporary, output_file)
+    finally:
+        temporary.unlink(missing_ok=True)
     
     return output_file
 

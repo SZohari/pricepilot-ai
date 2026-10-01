@@ -377,7 +377,9 @@ def validate_daily_market_update(update_dict: Dict) -> Tuple[bool, List[str]]:
         value = update_dict.get(field)
         if value is not None and str(value).strip() != '':
             try:
-                float(value)
+                parsed = float(value)
+                if not math.isfinite(parsed) or parsed <= 0:
+                    issues.append(f"{field} must be finite and positive")
             except (ValueError, TypeError):
                 issues.append(f"{field} must be numeric if provided")
     
@@ -439,8 +441,8 @@ def append_daily_market_update(
     # Load existing data
     try:
         df = pd.read_csv(path)
-    except Exception:
-        # File might not exist or be empty, create with headers
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        # A malformed or unreadable existing file must not be discarded.
         df = pd.DataFrame(columns=[
             'update_id',
             'observed_at',
@@ -507,8 +509,8 @@ def append_fx_rate_snapshot(
     # Load existing data
     try:
         df = pd.read_csv(path)
-    except Exception:
-        # File might not exist or be empty, create with headers
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        # A malformed or unreadable existing file must not be discarded.
         df = pd.DataFrame(columns=[
             'observed_at',
             'source',

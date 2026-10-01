@@ -1,0 +1,3530 @@
+{
+  "purpose": "Synthetic method benchmark; not evidence of merchant ROI",
+  "protocol": "Fixed seeds, no random split; train/validation/calibration/test in time order",
+  "results": [
+    {
+      "seed": 11,
+      "shock": false,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "813c372c2ff49ef3750bf39bef30194a71cde22112e6d7ff3992847b94238d09",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 18,
+      "selected_alpha": 10.0,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.3797
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.3779
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.3682
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.694
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 259
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 28
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 27
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 26
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 2.1429,
+          "rmse": 2.7089,
+          "wape": 0.1327,
+          "bias_units": -0.0472
+        },
+        "recent_7d": {
+          "mae": 4.0385,
+          "rmse": 5.067,
+          "wape": 0.25,
+          "bias_units": -1.1703
+        },
+        "same_weekday": {
+          "mae": 4.5385,
+          "rmse": 5.9807,
+          "wape": 0.281,
+          "bias_units": -0.7692
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.46938219636003464,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.7307692307692307,
+        "radius_units": 3.219879014335252
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": true,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.19330879867370881,
+        "log_competitor_price": 0.06460080234867345,
+        "promotion": 0.07425037160527284,
+        "trend_years": -0.030109422294263836,
+        "weekday_sin": 0.1362081586662261,
+        "weekday_cos": -0.0046540187260896634,
+        "log_recent_units": 0.008992304791093891
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "18 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 9,
+          "predicted": 12.127,
+          "lower": 8.907,
+          "upper": 15.347,
+          "recent_7d": 15.857,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 17,
+          "predicted": 14.811,
+          "lower": 11.591,
+          "upper": 18.031,
+          "recent_7d": 14.571,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 16,
+          "predicted": 12.684,
+          "lower": 9.464,
+          "upper": 15.904,
+          "recent_7d": 15,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 20,
+          "predicted": 17.288,
+          "lower": 14.068,
+          "upper": 20.508,
+          "recent_7d": 14.571,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 16,
+          "predicted": 16.354,
+          "lower": 13.134,
+          "upper": 19.574,
+          "recent_7d": 14.857,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 17,
+          "predicted": 15.267,
+          "lower": 12.047,
+          "upper": 18.487,
+          "recent_7d": 14.857,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 13,
+          "predicted": 16.66,
+          "lower": 13.441,
+          "upper": 19.88,
+          "recent_7d": 14,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 17,
+          "predicted": 16.52,
+          "lower": 13.3,
+          "upper": 19.74,
+          "recent_7d": 14.571,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 19,
+          "predicted": 17.313,
+          "lower": 14.093,
+          "upper": 20.533,
+          "recent_7d": 14.571,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 24,
+          "predicted": 20.715,
+          "lower": 17.495,
+          "upper": 23.935,
+          "recent_7d": 15,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 17,
+          "predicted": 16.539,
+          "lower": 13.319,
+          "upper": 19.759,
+          "recent_7d": 15.571,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 11,
+          "predicted": 10.065,
+          "lower": 6.845,
+          "upper": 13.285,
+          "recent_7d": 15.714,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 10,
+          "predicted": 9.891,
+          "lower": 6.671,
+          "upper": 13.111,
+          "recent_7d": 14.857,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 20,
+          "predicted": 20.837,
+          "lower": 17.617,
+          "upper": 24.057,
+          "recent_7d": 15.857,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 14,
+          "predicted": 14.156,
+          "lower": 10.936,
+          "upper": 17.376,
+          "recent_7d": 16.857,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 20,
+          "predicted": 17.668,
+          "lower": 14.448,
+          "upper": 20.887,
+          "recent_7d": 16.429,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 13,
+          "predicted": 17.248,
+          "lower": 14.028,
+          "upper": 20.468,
+          "recent_7d": 16.571,
+          "same_weekday": 24
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 13,
+          "predicted": 15.18,
+          "lower": 11.96,
+          "upper": 18.4,
+          "recent_7d": 15,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 12,
+          "predicted": 15.475,
+          "lower": 12.255,
+          "upper": 18.695,
+          "recent_7d": 14.429,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 18,
+          "predicted": 13.761,
+          "lower": 10.541,
+          "upper": 16.981,
+          "recent_7d": 14.571,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 7,
+          "predicted": 14.489,
+          "lower": 11.269,
+          "upper": 17.709,
+          "recent_7d": 15.714,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 20,
+          "predicted": 19.059,
+          "lower": 15.84,
+          "upper": 22.279,
+          "recent_7d": 13.857,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 27,
+          "predicted": 24.929,
+          "lower": 21.709,
+          "upper": 28.149,
+          "recent_7d": 12.286,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 14,
+          "predicted": 15.456,
+          "lower": 12.236,
+          "upper": 18.676,
+          "recent_7d": 14.286,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 18,
+          "predicted": 18.261,
+          "lower": 15.042,
+          "upper": 21.481,
+          "recent_7d": 14.429,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 18,
+          "predicted": 16.018,
+          "lower": 12.799,
+          "upper": 19.238,
+          "recent_7d": 15.286,
+          "same_weekday": 18
+        }
+      ]
+    },
+    {
+      "seed": 11,
+      "shock": true,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "1bb1d1706f94e003a83784004c9945ff493fba6e3f0b86fd88e003fa9c7cb00c",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 18,
+      "selected_alpha": 10.0,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.3797
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.3779
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.3682
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.694
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 259
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 28
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 27
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 26
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 8.516,
+          "rmse": 8.9592,
+          "wape": 1.2439,
+          "bias_units": 8.516
+        },
+        "recent_7d": {
+          "mae": 3.478,
+          "rmse": 4.496,
+          "wape": 0.508,
+          "bias_units": 0.8297
+        },
+        "same_weekday": {
+          "mae": 4.8846,
+          "rmse": 6.2849,
+          "wape": 0.7135,
+          "bias_units": 1.8846
+        }
+      },
+      "mae_improvement_vs_best_baseline": -1.4485336400230016,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.038461538461538464,
+        "radius_units": 3.219879014335252
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": false,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.19330879867370881,
+        "log_competitor_price": 0.06460080234867345,
+        "promotion": 0.07425037160527284,
+        "trend_years": -0.030109422294263836,
+        "weekday_sin": 0.1362081586662261,
+        "weekday_cos": -0.0046540187260896634,
+        "log_recent_units": 0.008992304791093891
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "18 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 2,
+          "predicted": 12.127,
+          "lower": 8.907,
+          "upper": 15.347,
+          "recent_7d": 15.857,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 8,
+          "predicted": 14.74,
+          "lower": 11.52,
+          "upper": 17.96,
+          "recent_7d": 13.571,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 8,
+          "predicted": 12.543,
+          "lower": 9.323,
+          "upper": 15.763,
+          "recent_7d": 12.714,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 10,
+          "predicted": 16.984,
+          "lower": 13.765,
+          "upper": 20.204,
+          "recent_7d": 11.143,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 7,
+          "predicted": 15.932,
+          "lower": 12.712,
+          "upper": 19.152,
+          "recent_7d": 10,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 8,
+          "predicted": 14.74,
+          "lower": 11.52,
+          "upper": 17.96,
+          "recent_7d": 8.714,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 2,
+          "predicted": 15.867,
+          "lower": 12.647,
+          "upper": 19.087,
+          "recent_7d": 6.571,
+          "same_weekday": 2
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 7,
+          "predicted": 15.691,
+          "lower": 12.471,
+          "upper": 18.911,
+          "recent_7d": 6.571,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 9,
+          "predicted": 16.423,
+          "lower": 13.203,
+          "upper": 19.643,
+          "recent_7d": 6.429,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 12,
+          "predicted": 19.649,
+          "lower": 16.43,
+          "upper": 22.869,
+          "recent_7d": 6.571,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 8,
+          "predicted": 15.68,
+          "lower": 12.46,
+          "upper": 18.9,
+          "recent_7d": 6.857,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 5,
+          "predicted": 9.53,
+          "lower": 6.31,
+          "upper": 12.75,
+          "recent_7d": 7,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 4,
+          "predicted": 9.362,
+          "lower": 6.143,
+          "upper": 12.582,
+          "recent_7d": 6.571,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 8,
+          "predicted": 19.718,
+          "lower": 16.498,
+          "upper": 22.938,
+          "recent_7d": 6.714,
+          "same_weekday": 2
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 5,
+          "predicted": 13.426,
+          "lower": 10.206,
+          "upper": 16.646,
+          "recent_7d": 7.571,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 10,
+          "predicted": 16.757,
+          "lower": 13.537,
+          "upper": 19.977,
+          "recent_7d": 7.286,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 3,
+          "predicted": 16.369,
+          "lower": 13.149,
+          "upper": 19.588,
+          "recent_7d": 7.429,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 4,
+          "predicted": 14.326,
+          "lower": 11.106,
+          "upper": 17.546,
+          "recent_7d": 6.143,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 3,
+          "predicted": 14.556,
+          "lower": 11.336,
+          "upper": 17.776,
+          "recent_7d": 5.571,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 10,
+          "predicted": 12.888,
+          "lower": 9.668,
+          "upper": 16.107,
+          "recent_7d": 5.286,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 0,
+          "predicted": 13.628,
+          "lower": 10.408,
+          "upper": 16.848,
+          "recent_7d": 6.143,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 9,
+          "predicted": 17.873,
+          "lower": 14.653,
+          "upper": 21.092,
+          "recent_7d": 5,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 13,
+          "predicted": 23.457,
+          "lower": 20.237,
+          "upper": 26.677,
+          "recent_7d": 4.571,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 6,
+          "predicted": 14.614,
+          "lower": 11.394,
+          "upper": 17.834,
+          "recent_7d": 6,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 8,
+          "predicted": 17.314,
+          "lower": 14.094,
+          "upper": 20.533,
+          "recent_7d": 6.286,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 9,
+          "predicted": 15.224,
+          "lower": 12.004,
+          "upper": 18.444,
+          "recent_7d": 7,
+          "same_weekday": 10
+        }
+      ]
+    },
+    {
+      "seed": 29,
+      "shock": false,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "2f25e1fbb90bf1956ea9e673b91ce36c8605fee8ccfaec637160408c893ff320",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 21,
+      "selected_alpha": 10.0,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.593
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.5928
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.5926
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.8778
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 254
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 28
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 27
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 28
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 1.8687,
+          "rmse": 2.2456,
+          "wape": 0.1187,
+          "bias_units": -1.0503
+        },
+        "recent_7d": {
+          "mae": 3.2041,
+          "rmse": 4.2033,
+          "wape": 0.2034,
+          "bias_units": -0.1837
+        },
+        "same_weekday": {
+          "mae": 3.7857,
+          "rmse": 5.1824,
+          "wape": 0.2404,
+          "bias_units": 0.0
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.4167785025436159,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 1,
+        "radius_units": 4.748664981189567
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": true,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.1866553295801839,
+        "log_competitor_price": 0.03383237139995692,
+        "promotion": 0.08596431692619301,
+        "trend_years": -0.06155299094786904,
+        "weekday_sin": 0.11639288356966469,
+        "weekday_cos": 0.009043059210516215,
+        "log_recent_units": -0.005671794605375839
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "21 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 18,
+          "predicted": 17.181,
+          "lower": 12.433,
+          "upper": 21.93,
+          "recent_7d": 17.571,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 15,
+          "predicted": 16.637,
+          "lower": 11.888,
+          "upper": 21.386,
+          "recent_7d": 18,
+          "same_weekday": 28
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 10,
+          "predicted": 14.409,
+          "lower": 9.66,
+          "upper": 19.157,
+          "recent_7d": 16.143,
+          "same_weekday": 21
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 20,
+          "predicted": 17.955,
+          "lower": 13.207,
+          "upper": 22.704,
+          "recent_7d": 14.571,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 17,
+          "predicted": 17.696,
+          "lower": 12.948,
+          "upper": 22.445,
+          "recent_7d": 14.571,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 13,
+          "predicted": 11.406,
+          "lower": 6.658,
+          "upper": 16.155,
+          "recent_7d": 15.429,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 15,
+          "predicted": 12.399,
+          "lower": 7.65,
+          "upper": 17.148,
+          "recent_7d": 15.286,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 13,
+          "predicted": 9.702,
+          "lower": 4.953,
+          "upper": 14.451,
+          "recent_7d": 15.429,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 16,
+          "predicted": 14.168,
+          "lower": 9.42,
+          "upper": 18.917,
+          "recent_7d": 14.714,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 15,
+          "predicted": 14.127,
+          "lower": 9.378,
+          "upper": 18.875,
+          "recent_7d": 14.857,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 17,
+          "predicted": 14.73,
+          "lower": 9.981,
+          "upper": 19.479,
+          "recent_7d": 15.571,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 18,
+          "predicted": 16.154,
+          "lower": 11.406,
+          "upper": 20.903,
+          "recent_7d": 15.143,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 10,
+          "predicted": 9.794,
+          "lower": 5.045,
+          "upper": 14.543,
+          "recent_7d": 15.286,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 17,
+          "predicted": 14.898,
+          "lower": 10.15,
+          "upper": 19.647,
+          "recent_7d": 14.857,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 14,
+          "predicted": 13.158,
+          "lower": 8.41,
+          "upper": 17.907,
+          "recent_7d": 15.143,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 12,
+          "predicted": 12.35,
+          "lower": 7.601,
+          "upper": 17.098,
+          "recent_7d": 15.286,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 14,
+          "predicted": 12.371,
+          "lower": 7.622,
+          "upper": 17.119,
+          "recent_7d": 14.714,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 14,
+          "predicted": 14.603,
+          "lower": 9.854,
+          "upper": 19.352,
+          "recent_7d": 14.571,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 24,
+          "predicted": 20.348,
+          "lower": 15.6,
+          "upper": 25.097,
+          "recent_7d": 14.143,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 12,
+          "predicted": 12.598,
+          "lower": 7.849,
+          "upper": 17.347,
+          "recent_7d": 15,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 14,
+          "predicted": 10.366,
+          "lower": 5.617,
+          "upper": 15.115,
+          "recent_7d": 15.286,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 12,
+          "predicted": 9.64,
+          "lower": 4.891,
+          "upper": 14.389,
+          "recent_7d": 14.857,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 24,
+          "predicted": 24.091,
+          "lower": 19.342,
+          "upper": 28.84,
+          "recent_7d": 14.571,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 14,
+          "predicted": 16.169,
+          "lower": 11.42,
+          "upper": 20.917,
+          "recent_7d": 16.286,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 24,
+          "predicted": 19.328,
+          "lower": 14.58,
+          "upper": 24.077,
+          "recent_7d": 16.286,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 22,
+          "predicted": 20.752,
+          "lower": 16.003,
+          "upper": 25.5,
+          "recent_7d": 17.714,
+          "same_weekday": 24
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 10,
+          "predicted": 10.906,
+          "lower": 6.157,
+          "upper": 15.654,
+          "recent_7d": 17.429,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 17,
+          "predicted": 13.654,
+          "lower": 8.905,
+          "upper": 18.403,
+          "recent_7d": 17.143,
+          "same_weekday": 14
+        }
+      ]
+    },
+    {
+      "seed": 29,
+      "shock": true,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "3e6fd11c6cdb61d72a271a5f45c323caa0d3143b85bde3761e2b65be6697d523",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 21,
+      "selected_alpha": 10.0,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.593
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.5928
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.5926
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.8778
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 254
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 28
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 27
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 28
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 7.9701,
+          "rmse": 8.4769,
+          "wape": 1.1214,
+          "bias_units": 7.9701
+        },
+        "recent_7d": {
+          "mae": 2.8776,
+          "rmse": 4.2128,
+          "wape": 0.4049,
+          "bias_units": 1.1429
+        },
+        "same_weekday": {
+          "mae": 4.5,
+          "rmse": 6.9949,
+          "wape": 0.6332,
+          "bias_units": 2.3571
+        }
+      },
+      "mae_improvement_vs_best_baseline": -1.7697039199332778,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.10714285714285714,
+        "radius_units": 4.748664981189567
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": false,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.1866553295801839,
+        "log_competitor_price": 0.03383237139995692,
+        "promotion": 0.08596431692619301,
+        "trend_years": -0.06155299094786904,
+        "weekday_sin": 0.11639288356966469,
+        "weekday_cos": 0.009043059210516215,
+        "log_recent_units": -0.005671794605375839
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "21 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 8,
+          "predicted": 17.181,
+          "lower": 12.433,
+          "upper": 21.93,
+          "recent_7d": 17.571,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 5,
+          "predicted": 16.691,
+          "lower": 11.943,
+          "upper": 21.44,
+          "recent_7d": 16.571,
+          "same_weekday": 28
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 2,
+          "predicted": 14.519,
+          "lower": 9.771,
+          "upper": 19.268,
+          "recent_7d": 13.286,
+          "same_weekday": 21
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 9,
+          "predicted": 18.178,
+          "lower": 13.429,
+          "upper": 22.926,
+          "recent_7d": 10.571,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 7,
+          "predicted": 18.024,
+          "lower": 13.276,
+          "upper": 22.773,
+          "recent_7d": 9,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 6,
+          "predicted": 11.68,
+          "lower": 6.931,
+          "upper": 16.429,
+          "recent_7d": 8.429,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 7,
+          "predicted": 12.759,
+          "lower": 8.011,
+          "upper": 17.508,
+          "recent_7d": 7.286,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 7,
+          "predicted": 10.049,
+          "lower": 5.3,
+          "upper": 14.798,
+          "recent_7d": 6.286,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 8,
+          "predicted": 14.645,
+          "lower": 9.897,
+          "upper": 19.394,
+          "recent_7d": 6.143,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 7,
+          "predicted": 14.572,
+          "lower": 9.824,
+          "upper": 19.321,
+          "recent_7d": 6.571,
+          "same_weekday": 2
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 8,
+          "predicted": 15.164,
+          "lower": 10.415,
+          "upper": 19.913,
+          "recent_7d": 7.286,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 8,
+          "predicted": 16.622,
+          "lower": 11.873,
+          "upper": 21.37,
+          "recent_7d": 7.143,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 4,
+          "predicted": 10.084,
+          "lower": 5.336,
+          "upper": 14.833,
+          "recent_7d": 7.286,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 9,
+          "predicted": 15.331,
+          "lower": 10.583,
+          "upper": 20.08,
+          "recent_7d": 7,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 7,
+          "predicted": 13.534,
+          "lower": 8.785,
+          "upper": 18.283,
+          "recent_7d": 7.286,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 4,
+          "predicted": 12.709,
+          "lower": 7.96,
+          "upper": 17.457,
+          "recent_7d": 7.286,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 6,
+          "predicted": 12.749,
+          "lower": 8.001,
+          "upper": 17.498,
+          "recent_7d": 6.714,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 5,
+          "predicted": 15.051,
+          "lower": 10.302,
+          "upper": 19.8,
+          "recent_7d": 6.571,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 12,
+          "predicted": 20.988,
+          "lower": 16.239,
+          "upper": 25.736,
+          "recent_7d": 6.143,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 5,
+          "predicted": 12.993,
+          "lower": 8.244,
+          "upper": 17.742,
+          "recent_7d": 6.714,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 8,
+          "predicted": 10.696,
+          "lower": 5.947,
+          "upper": 15.445,
+          "recent_7d": 6.857,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 7,
+          "predicted": 9.945,
+          "lower": 5.197,
+          "upper": 14.694,
+          "recent_7d": 6.714,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 10,
+          "predicted": 24.793,
+          "lower": 20.044,
+          "upper": 29.541,
+          "recent_7d": 6.714,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 5,
+          "predicted": 16.648,
+          "lower": 11.9,
+          "upper": 21.397,
+          "recent_7d": 7.571,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 12,
+          "predicted": 19.91,
+          "lower": 15.161,
+          "upper": 24.659,
+          "recent_7d": 7.429,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 10,
+          "predicted": 21.345,
+          "lower": 16.596,
+          "upper": 26.094,
+          "recent_7d": 8.429,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 4,
+          "predicted": 11.238,
+          "lower": 6.489,
+          "upper": 15.987,
+          "recent_7d": 8.143,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 9,
+          "predicted": 14.063,
+          "lower": 9.314,
+          "upper": 18.812,
+          "recent_7d": 8,
+          "same_weekday": 8
+        }
+      ]
+    },
+    {
+      "seed": 47,
+      "shock": false,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "7e31dcaaf75413fcebbe31a23530250bb30eafe9e6ceb08eb1e1c899ddf5ea71",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 23,
+      "selected_alpha": 10.0,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.2048
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.202
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.1762
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.2799
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 257
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 27
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 25
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 27
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 2.5284,
+          "rmse": 3.0138,
+          "wape": 0.152,
+          "bias_units": -0.363
+        },
+        "recent_7d": {
+          "mae": 3.3492,
+          "rmse": 4.0966,
+          "wape": 0.2014,
+          "bias_units": -0.7143
+        },
+        "same_weekday": {
+          "mae": 3.9259,
+          "rmse": 4.8762,
+          "wape": 0.2361,
+          "bias_units": -0.7407
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.2450734503762093,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.7777777777777778,
+        "radius_units": 3.7033507971028
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": true,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.19699753872922549,
+        "log_competitor_price": 0.04882702815636415,
+        "promotion": 0.07593866124980132,
+        "trend_years": -0.028215334247778723,
+        "weekday_sin": 0.11051119545072047,
+        "weekday_cos": 0.002149937626826409,
+        "log_recent_units": 0.016485006951006603
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "23 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 15,
+          "predicted": 15.578,
+          "lower": 11.875,
+          "upper": 19.282,
+          "recent_7d": 13.857,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 17,
+          "predicted": 15.606,
+          "lower": 11.903,
+          "upper": 19.31,
+          "recent_7d": 14.571,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 15,
+          "predicted": 17.746,
+          "lower": 14.042,
+          "upper": 21.449,
+          "recent_7d": 15.571,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 15,
+          "predicted": 18.209,
+          "lower": 14.505,
+          "upper": 21.912,
+          "recent_7d": 15,
+          "same_weekday": 23
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 12,
+          "predicted": 13.349,
+          "lower": 9.645,
+          "upper": 17.052,
+          "recent_7d": 13.857,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 22,
+          "predicted": 23.459,
+          "lower": 19.755,
+          "upper": 27.162,
+          "recent_7d": 15.143,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 13,
+          "predicted": 12.256,
+          "lower": 8.553,
+          "upper": 15.96,
+          "recent_7d": 16,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 20,
+          "predicted": 17.964,
+          "lower": 14.261,
+          "upper": 21.667,
+          "recent_7d": 15.571,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 17,
+          "predicted": 11.182,
+          "lower": 7.478,
+          "upper": 14.885,
+          "recent_7d": 16.286,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 24,
+          "predicted": 17.765,
+          "lower": 14.061,
+          "upper": 21.468,
+          "recent_7d": 16.286,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 18,
+          "predicted": 20.637,
+          "lower": 16.933,
+          "upper": 24.34,
+          "recent_7d": 17.571,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 13,
+          "predicted": 15.764,
+          "lower": 12.061,
+          "upper": 19.468,
+          "recent_7d": 18,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 16,
+          "predicted": 13.04,
+          "lower": 9.337,
+          "upper": 16.743,
+          "recent_7d": 18.143,
+          "same_weekday": 22
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 11,
+          "predicted": 9.483,
+          "lower": 5.78,
+          "upper": 13.186,
+          "recent_7d": 17.286,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 21,
+          "predicted": 19.085,
+          "lower": 15.382,
+          "upper": 22.789,
+          "recent_7d": 17,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 15,
+          "predicted": 17.567,
+          "lower": 13.864,
+          "upper": 21.271,
+          "recent_7d": 17.143,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 23,
+          "predicted": 22.135,
+          "lower": 18.432,
+          "upper": 25.838,
+          "recent_7d": 16.857,
+          "same_weekday": 24
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 19,
+          "predicted": 17.06,
+          "lower": 13.357,
+          "upper": 20.763,
+          "recent_7d": 16.714,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 23,
+          "predicted": 20.751,
+          "lower": 17.047,
+          "upper": 24.454,
+          "recent_7d": 16.857,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 14,
+          "predicted": 19.235,
+          "lower": 15.532,
+          "upper": 22.939,
+          "recent_7d": 18.286,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 10,
+          "predicted": 9.489,
+          "lower": 5.786,
+          "upper": 13.192,
+          "recent_7d": 18,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 13,
+          "predicted": 12.556,
+          "lower": 8.853,
+          "upper": 16.26,
+          "recent_7d": 15.286,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 17,
+          "predicted": 12.566,
+          "lower": 8.862,
+          "upper": 16.269,
+          "recent_7d": 15,
+          "same_weekday": 23
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 20,
+          "predicted": 22.214,
+          "lower": 18.511,
+          "upper": 25.918,
+          "recent_7d": 14.143,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 17,
+          "predicted": 21.475,
+          "lower": 17.771,
+          "upper": 25.178,
+          "recent_7d": 14.286,
+          "same_weekday": 23
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 15,
+          "predicted": 10.017,
+          "lower": 6.313,
+          "upper": 13.72,
+          "recent_7d": 13.429,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 14,
+          "predicted": 13.012,
+          "lower": 9.308,
+          "upper": 16.715,
+          "recent_7d": 13.571,
+          "same_weekday": 10
+        }
+      ]
+    },
+    {
+      "seed": 47,
+      "shock": true,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "7232664f18c6493bcd9930db0dd9c617411a93c9778ef1512d6f38a713bee0ae",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 23,
+      "selected_alpha": 10.0,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.2048
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.202
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.1762
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.2799
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 257
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 27
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 25
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 27
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 7.5606,
+          "rmse": 8.7939,
+          "wape": 1.0156,
+          "bias_units": 7.5569
+        },
+        "recent_7d": {
+          "mae": 3.3333,
+          "rmse": 3.9748,
+          "wape": 0.4478,
+          "bias_units": 0.7513
+        },
+        "same_weekday": {
+          "mae": 4.4444,
+          "rmse": 6.2242,
+          "wape": 0.597,
+          "bias_units": 1.5556
+        }
+      },
+      "mae_improvement_vs_best_baseline": -1.2682026820268204,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.25925925925925924,
+        "radius_units": 3.7033507971028
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": false,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.19699753872922549,
+        "log_competitor_price": 0.04882702815636415,
+        "promotion": 0.07593866124980132,
+        "trend_years": -0.028215334247778723,
+        "weekday_sin": 0.11051119545072047,
+        "weekday_cos": 0.002149937626826409,
+        "log_recent_units": 0.016485006951006603
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "23 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 6,
+          "predicted": 15.578,
+          "lower": 11.875,
+          "upper": 19.282,
+          "recent_7d": 13.857,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 8,
+          "predicted": 15.432,
+          "lower": 11.728,
+          "upper": 19.135,
+          "recent_7d": 13.286,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 5,
+          "predicted": 17.362,
+          "lower": 13.659,
+          "upper": 21.066,
+          "recent_7d": 13,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 4,
+          "predicted": 17.543,
+          "lower": 13.84,
+          "upper": 21.247,
+          "recent_7d": 11,
+          "same_weekday": 23
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 5,
+          "predicted": 12.546,
+          "lower": 8.842,
+          "upper": 16.249,
+          "recent_7d": 8.286,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 8,
+          "predicted": 21.941,
+          "lower": 18.238,
+          "upper": 25.645,
+          "recent_7d": 8.571,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 6,
+          "predicted": 11.164,
+          "lower": 7.461,
+          "upper": 14.867,
+          "recent_7d": 7.429,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 10,
+          "predicted": 16.063,
+          "lower": 12.36,
+          "upper": 19.767,
+          "recent_7d": 6,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 10,
+          "predicted": 10.01,
+          "lower": 6.306,
+          "upper": 13.713,
+          "recent_7d": 6.571,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 14,
+          "predicted": 16.036,
+          "lower": 12.333,
+          "upper": 19.74,
+          "recent_7d": 6.857,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 6,
+          "predicted": 18.837,
+          "lower": 15.134,
+          "upper": 22.54,
+          "recent_7d": 8.143,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 4,
+          "predicted": 14.385,
+          "lower": 10.681,
+          "upper": 18.088,
+          "recent_7d": 8.429,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 9,
+          "predicted": 11.849,
+          "lower": 8.145,
+          "upper": 15.552,
+          "recent_7d": 8.286,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 6,
+          "predicted": 8.666,
+          "lower": 4.962,
+          "upper": 12.369,
+          "recent_7d": 8.429,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 10,
+          "predicted": 17.555,
+          "lower": 13.852,
+          "upper": 21.258,
+          "recent_7d": 8.429,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 5,
+          "predicted": 16.136,
+          "lower": 12.433,
+          "upper": 19.839,
+          "recent_7d": 8.429,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 11,
+          "predicted": 20.188,
+          "lower": 16.484,
+          "upper": 23.891,
+          "recent_7d": 7.714,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 9,
+          "predicted": 15.454,
+          "lower": 11.751,
+          "upper": 19.157,
+          "recent_7d": 7.286,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 11,
+          "predicted": 18.92,
+          "lower": 15.216,
+          "upper": 22.623,
+          "recent_7d": 7.714,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 4,
+          "predicted": 17.604,
+          "lower": 13.901,
+          "upper": 21.308,
+          "recent_7d": 8.714,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 5,
+          "predicted": 8.571,
+          "lower": 4.868,
+          "upper": 12.274,
+          "recent_7d": 8,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 6,
+          "predicted": 11.313,
+          "lower": 7.61,
+          "upper": 15.016,
+          "recent_7d": 6.429,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 10,
+          "predicted": 11.377,
+          "lower": 7.674,
+          "upper": 15.08,
+          "recent_7d": 6.571,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 7,
+          "predicted": 20.274,
+          "lower": 16.571,
+          "upper": 23.977,
+          "recent_7d": 6.429,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 5,
+          "predicted": 19.474,
+          "lower": 15.77,
+          "upper": 23.177,
+          "recent_7d": 6.143,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 9,
+          "predicted": 8.95,
+          "lower": 5.247,
+          "upper": 12.653,
+          "recent_7d": 5.286,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 8,
+          "predicted": 11.808,
+          "lower": 8.104,
+          "upper": 15.511,
+          "recent_7d": 6,
+          "same_weekday": 5
+        }
+      ]
+    },
+    {
+      "seed": 73,
+      "shock": false,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "4530a86bd0f811b6c3968dd2e30119220cde41dd1fd72dc9f3e65b84c74a5b27",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 19,
+      "selected_alpha": 0.1,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.3464
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.3482
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.3648
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.5649
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 259
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 26
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 27
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 27
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 1.9595,
+          "rmse": 2.4285,
+          "wape": 0.1153,
+          "bias_units": -1.0813
+        },
+        "recent_7d": {
+          "mae": 3.291,
+          "rmse": 3.935,
+          "wape": 0.1936,
+          "bias_units": 0.3069
+        },
+        "same_weekday": {
+          "mae": 3.7037,
+          "rmse": 5.0845,
+          "wape": 0.2179,
+          "bias_units": 0.5926
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.4045882710422364,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.9259259259259259,
+        "radius_units": 4.259960328899194
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": true,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.20888068405891294,
+        "log_competitor_price": 0.054509092365923016,
+        "promotion": 0.07893816841006338,
+        "trend_years": -0.03242578811731803,
+        "weekday_sin": 0.1554614899832906,
+        "weekday_cos": 0.006329718988924726,
+        "log_recent_units": 0.03446558647615835
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "19 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 12,
+          "predicted": 13.321,
+          "lower": 9.061,
+          "upper": 17.581,
+          "recent_7d": 18,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 18,
+          "predicted": 16.253,
+          "lower": 11.993,
+          "upper": 20.513,
+          "recent_7d": 19,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 16,
+          "predicted": 15.686,
+          "lower": 11.426,
+          "upper": 19.946,
+          "recent_7d": 19.714,
+          "same_weekday": 32
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 23,
+          "predicted": 17.064,
+          "lower": 12.804,
+          "upper": 21.324,
+          "recent_7d": 17.429,
+          "same_weekday": 27
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 27,
+          "predicted": 22.997,
+          "lower": 18.737,
+          "upper": 27.257,
+          "recent_7d": 16.857,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 19,
+          "predicted": 19.774,
+          "lower": 15.514,
+          "upper": 24.034,
+          "recent_7d": 18,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 14,
+          "predicted": 12.583,
+          "lower": 8.323,
+          "upper": 16.843,
+          "recent_7d": 18.714,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 15,
+          "predicted": 15.133,
+          "lower": 10.873,
+          "upper": 19.393,
+          "recent_7d": 18.429,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 17,
+          "predicted": 18.293,
+          "lower": 14.033,
+          "upper": 22.553,
+          "recent_7d": 18.857,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 23,
+          "predicted": 19.237,
+          "lower": 14.977,
+          "upper": 23.497,
+          "recent_7d": 18.714,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 19,
+          "predicted": 18.76,
+          "lower": 14.5,
+          "upper": 23.02,
+          "recent_7d": 19.714,
+          "same_weekday": 23
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 20,
+          "predicted": 17.438,
+          "lower": 13.178,
+          "upper": 21.698,
+          "recent_7d": 19.143,
+          "same_weekday": 27
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 14,
+          "predicted": 11.342,
+          "lower": 7.082,
+          "upper": 15.602,
+          "recent_7d": 18.143,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 13,
+          "predicted": 9.946,
+          "lower": 5.687,
+          "upper": 14.206,
+          "recent_7d": 17.429,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 15,
+          "predicted": 16.229,
+          "lower": 11.969,
+          "upper": 20.489,
+          "recent_7d": 17.286,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 16,
+          "predicted": 15.79,
+          "lower": 11.53,
+          "upper": 20.05,
+          "recent_7d": 17.286,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 22,
+          "predicted": 18.691,
+          "lower": 14.431,
+          "upper": 22.951,
+          "recent_7d": 17.143,
+          "same_weekday": 23
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 18,
+          "predicted": 19.522,
+          "lower": 15.262,
+          "upper": 23.782,
+          "recent_7d": 17,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 19,
+          "predicted": 17.084,
+          "lower": 12.824,
+          "upper": 21.344,
+          "recent_7d": 16.857,
+          "same_weekday": 20
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 14,
+          "predicted": 9.7,
+          "lower": 5.44,
+          "upper": 13.96,
+          "recent_7d": 16.714,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 14,
+          "predicted": 12.352,
+          "lower": 8.092,
+          "upper": 16.612,
+          "recent_7d": 16.714,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 13,
+          "predicted": 14.715,
+          "lower": 10.455,
+          "upper": 18.975,
+          "recent_7d": 16.857,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 13,
+          "predicted": 13.515,
+          "lower": 9.255,
+          "upper": 17.775,
+          "recent_7d": 16.571,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 14,
+          "predicted": 17.195,
+          "lower": 12.935,
+          "upper": 21.455,
+          "recent_7d": 16.143,
+          "same_weekday": 22
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 19,
+          "predicted": 17.55,
+          "lower": 13.29,
+          "upper": 21.81,
+          "recent_7d": 15,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 13,
+          "predicted": 10.477,
+          "lower": 6.217,
+          "upper": 14.737,
+          "recent_7d": 12.857,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 19,
+          "predicted": 19.159,
+          "lower": 14.899,
+          "upper": 23.419,
+          "recent_7d": 12.714,
+          "same_weekday": 14
+        }
+      ]
+    },
+    {
+      "seed": 73,
+      "shock": true,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "65e4011704f78376b1d1456e39d8aa319d510332340399bdbaf2dcb048e4c8d6",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 19,
+      "selected_alpha": 0.1,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 2.3464
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 2.3482
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 2.3648
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.5649
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 259
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 26
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 27
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 27
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 5.8826,
+          "rmse": 6.4844,
+          "wape": 0.7319,
+          "bias_units": 5.8826
+        },
+        "recent_7d": {
+          "mae": 2.9947,
+          "rmse": 4.3432,
+          "wape": 0.3726,
+          "bias_units": 1.6296
+        },
+        "same_weekday": {
+          "mae": 3.9259,
+          "rmse": 6.549,
+          "wape": 0.4885,
+          "bias_units": 2.8148
+        }
+      },
+      "mae_improvement_vs_best_baseline": -0.9643369953584666,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.25925925925925924,
+        "radius_units": 4.259960328899194
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": false,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.20888068405891294,
+        "log_competitor_price": 0.054509092365923016,
+        "promotion": 0.07893816841006338,
+        "trend_years": -0.03242578811731803,
+        "weekday_sin": 0.1554614899832906,
+        "weekday_cos": 0.006329718988924726,
+        "log_recent_units": 0.03446558647615835
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "19 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "1 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 4,
+          "predicted": 13.321,
+          "lower": 9.061,
+          "upper": 17.581,
+          "recent_7d": 18,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 9,
+          "predicted": 16.028,
+          "lower": 11.768,
+          "upper": 20.288,
+          "recent_7d": 17.857,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 7,
+          "predicted": 15.228,
+          "lower": 10.969,
+          "upper": 19.488,
+          "recent_7d": 17.286,
+          "same_weekday": 32
+        },
+        {
+          "day": "2026-09-02",
+          "actual": 13,
+          "predicted": 16.18,
+          "lower": 11.92,
+          "upper": 20.44,
+          "recent_7d": 13.714,
+          "same_weekday": 27
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 14,
+          "predicted": 21.246,
+          "lower": 16.986,
+          "upper": 25.506,
+          "recent_7d": 11.714,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 7,
+          "predicted": 17.751,
+          "lower": 13.491,
+          "upper": 22.01,
+          "recent_7d": 11,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 6,
+          "predicted": 10.926,
+          "lower": 6.666,
+          "upper": 15.186,
+          "recent_7d": 10,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 7,
+          "predicted": 12.777,
+          "lower": 8.517,
+          "upper": 17.037,
+          "recent_7d": 8.571,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 7,
+          "predicted": 15.556,
+          "lower": 11.296,
+          "upper": 19.816,
+          "recent_7d": 9,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 12,
+          "predicted": 16.282,
+          "lower": 12.022,
+          "upper": 20.542,
+          "recent_7d": 8.714,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 9,
+          "predicted": 15.956,
+          "lower": 11.696,
+          "upper": 20.216,
+          "recent_7d": 9.429,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 10,
+          "predicted": 14.722,
+          "lower": 10.462,
+          "upper": 18.982,
+          "recent_7d": 8.857,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 8,
+          "predicted": 9.504,
+          "lower": 5.244,
+          "upper": 13.763,
+          "recent_7d": 8.286,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 7,
+          "predicted": 8.427,
+          "lower": 4.167,
+          "upper": 12.687,
+          "recent_7d": 8.429,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 6,
+          "predicted": 13.913,
+          "lower": 9.653,
+          "upper": 18.173,
+          "recent_7d": 8.571,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 7,
+          "predicted": 13.485,
+          "lower": 9.225,
+          "upper": 17.745,
+          "recent_7d": 8.429,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 12,
+          "predicted": 16.017,
+          "lower": 11.757,
+          "upper": 20.277,
+          "recent_7d": 8.429,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 7,
+          "predicted": 16.767,
+          "lower": 12.507,
+          "upper": 21.027,
+          "recent_7d": 8.429,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-17",
+          "actual": 9,
+          "predicted": 14.576,
+          "lower": 10.316,
+          "upper": 18.836,
+          "recent_7d": 8.143,
+          "same_weekday": 10
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 8,
+          "predicted": 8.2,
+          "lower": 3.94,
+          "upper": 12.46,
+          "recent_7d": 8,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 7,
+          "predicted": 10.481,
+          "lower": 6.221,
+          "upper": 14.741,
+          "recent_7d": 8,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 5,
+          "predicted": 12.489,
+          "lower": 8.229,
+          "upper": 16.749,
+          "recent_7d": 8,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 5,
+          "predicted": 11.459,
+          "lower": 7.199,
+          "upper": 15.719,
+          "recent_7d": 7.857,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 5,
+          "predicted": 14.589,
+          "lower": 10.329,
+          "upper": 18.849,
+          "recent_7d": 7.571,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 10,
+          "predicted": 14.699,
+          "lower": 10.439,
+          "upper": 18.959,
+          "recent_7d": 6.571,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-25",
+          "actual": 7,
+          "predicted": 8.901,
+          "lower": 4.641,
+          "upper": 13.161,
+          "recent_7d": 6.143,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 9,
+          "predicted": 16.352,
+          "lower": 12.092,
+          "upper": 20.612,
+          "recent_7d": 6,
+          "same_weekday": 7
+        }
+      ]
+    },
+    {
+      "seed": 101,
+      "shock": false,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "3fa559758ff5d5e3e99ba0f43ad0e96039f0eae96c22f659b914efd7c293b033",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 14,
+      "selected_alpha": 0.1,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 1.8402
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 1.8451
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 1.9063
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.5793
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 263
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 28
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 28
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 25
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 2.8606,
+          "rmse": 3.2426,
+          "wape": 0.1633,
+          "bias_units": -0.9383
+        },
+        "recent_7d": {
+          "mae": 5.8914,
+          "rmse": 6.9238,
+          "wape": 0.3363,
+          "bias_units": -0.8629
+        },
+        "same_weekday": {
+          "mae": 5.44,
+          "rmse": 6.7469,
+          "wape": 0.3105,
+          "bias_units": -1.44
+        }
+      },
+      "mae_improvement_vs_best_baseline": 0.47415441176470596,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.48,
+        "radius_units": 2.981768739050139
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": true,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.2198358674831219,
+        "log_competitor_price": 0.07288419953928763,
+        "promotion": 0.09720156404594853,
+        "trend_years": -0.03117593070951146,
+        "weekday_sin": 0.13044932156551908,
+        "weekday_cos": 0.001798903204485607,
+        "log_recent_units": 0.011256033707316742
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "14 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "4 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 8,
+          "predicted": 10.285,
+          "lower": 7.303,
+          "upper": 13.266,
+          "recent_7d": 17.286,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 24,
+          "predicted": 20.821,
+          "lower": 17.839,
+          "upper": 23.803,
+          "recent_7d": 16.857,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 28,
+          "predicted": 23.548,
+          "lower": 20.566,
+          "upper": 26.53,
+          "recent_7d": 17.571,
+          "same_weekday": 21
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 21,
+          "predicted": 21.96,
+          "lower": 18.978,
+          "upper": 24.942,
+          "recent_7d": 15.571,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 14,
+          "predicted": 15.458,
+          "lower": 12.476,
+          "upper": 18.44,
+          "recent_7d": 16.429,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 16,
+          "predicted": 12.482,
+          "lower": 9.5,
+          "upper": 15.463,
+          "recent_7d": 15.857,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 12,
+          "predicted": 13.119,
+          "lower": 10.138,
+          "upper": 16.101,
+          "recent_7d": 16.286,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 31,
+          "predicted": 26.573,
+          "lower": 23.591,
+          "upper": 29.554,
+          "recent_7d": 16.857,
+          "same_weekday": 24
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 25,
+          "predicted": 20.459,
+          "lower": 17.477,
+          "upper": 23.44,
+          "recent_7d": 17.857,
+          "same_weekday": 28
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 11,
+          "predicted": 14.393,
+          "lower": 11.411,
+          "upper": 17.375,
+          "recent_7d": 17.429,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 19,
+          "predicted": 15.088,
+          "lower": 12.107,
+          "upper": 18.07,
+          "recent_7d": 18.571,
+          "same_weekday": 21
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 15,
+          "predicted": 16.017,
+          "lower": 13.035,
+          "upper": 18.999,
+          "recent_7d": 18.286,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 14,
+          "predicted": 10.017,
+          "lower": 7.036,
+          "upper": 12.999,
+          "recent_7d": 18.429,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 14,
+          "predicted": 12.871,
+          "lower": 9.889,
+          "upper": 15.853,
+          "recent_7d": 18.143,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 17,
+          "predicted": 15.105,
+          "lower": 12.124,
+          "upper": 18.087,
+          "recent_7d": 18.429,
+          "same_weekday": 31
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 14,
+          "predicted": 17.356,
+          "lower": 14.374,
+          "upper": 20.337,
+          "recent_7d": 16.429,
+          "same_weekday": 25
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 25,
+          "predicted": 24.558,
+          "lower": 21.576,
+          "upper": 27.54,
+          "recent_7d": 14.857,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 25,
+          "predicted": 18.23,
+          "lower": 15.249,
+          "upper": 21.212,
+          "recent_7d": 14.571,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 10,
+          "predicted": 8.431,
+          "lower": 5.45,
+          "upper": 11.413,
+          "recent_7d": 16,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 13,
+          "predicted": 10.281,
+          "lower": 7.299,
+          "upper": 13.263,
+          "recent_7d": 15.429,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 18,
+          "predicted": 19.82,
+          "lower": 16.839,
+          "upper": 22.802,
+          "recent_7d": 15.286,
+          "same_weekday": 17
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 27,
+          "predicted": 23.901,
+          "lower": 20.919,
+          "upper": 26.883,
+          "recent_7d": 15.429,
+          "same_weekday": 14
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 22,
+          "predicted": 20.149,
+          "lower": 17.167,
+          "upper": 23.131,
+          "recent_7d": 17.286,
+          "same_weekday": 25
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 8,
+          "predicted": 11.415,
+          "lower": 8.434,
+          "upper": 14.397,
+          "recent_7d": 16.857,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 7,
+          "predicted": 12.205,
+          "lower": 9.223,
+          "upper": 15.187,
+          "recent_7d": 14.429,
+          "same_weekday": 10
+        }
+      ]
+    },
+    {
+      "seed": 101,
+      "shock": true,
+      "model_version": "daily-ridge-1",
+      "dataset_sha256": "62140c9a59d07fecd620be7667ed4f75b6c1a32cc904e1af3bade6379885fa54",
+      "origin": "synthetic",
+      "runtime": {
+        "python": "3.12.14",
+        "numpy": "2.3.5"
+      },
+      "product_id": "DEMO-DAILY-WEARABLE",
+      "rows": 365,
+      "excluded_stockout_days": 14,
+      "selected_alpha": 0.1,
+      "selection_trials": [
+        {
+          "alpha": 0.1,
+          "validation_mae": 1.8402
+        },
+        {
+          "alpha": 1.0,
+          "validation_mae": 1.8451
+        },
+        {
+          "alpha": 10.0,
+          "validation_mae": 1.9063
+        },
+        {
+          "alpha": 100.0,
+          "validation_mae": 2.5793
+        }
+      ],
+      "split": {
+        "training": {
+          "start": "2025-10-04",
+          "end": "2026-07-04",
+          "usable_days": 263
+        },
+        "validation": {
+          "start": "2026-07-05",
+          "end": "2026-08-01",
+          "usable_days": 28
+        },
+        "calibration": {
+          "start": "2026-08-02",
+          "end": "2026-08-29",
+          "usable_days": 28
+        },
+        "test": {
+          "start": "2026-08-30",
+          "end": "2026-09-26",
+          "usable_days": 25
+        }
+      },
+      "metrics": {
+        "ridge": {
+          "mae": 7.6428,
+          "rmse": 8.3219,
+          "wape": 0.9412,
+          "bias_units": 7.6428
+        },
+        "recent_7d": {
+          "mae": 3.9771,
+          "rmse": 5.1568,
+          "wape": 0.4898,
+          "bias_units": 1.12
+        },
+        "same_weekday": {
+          "mae": 4.64,
+          "rmse": 5.8856,
+          "wape": 0.5714,
+          "bias_units": 1.52
+        }
+      },
+      "mae_improvement_vs_best_baseline": -0.9217017424756733,
+      "empirical_interval": {
+        "nominal_coverage": 0.8,
+        "observed_test_coverage": 0.16,
+        "radius_units": 2.981768739050139
+      },
+      "status": "research_only",
+      "live_pricing_allowed": false,
+      "beats_both_baselines": false,
+      "features": [
+        "log_price",
+        "log_competitor_price",
+        "promotion",
+        "trend_years",
+        "weekday_sin",
+        "weekday_cos",
+        "log_recent_units"
+      ],
+      "standardized_coefficients": {
+        "log_price": -0.2198358674831219,
+        "log_competitor_price": 0.07288419953928763,
+        "promotion": 0.09720156404594853,
+        "trend_years": -0.03117593070951146,
+        "weekday_sin": 0.13044932156551908,
+        "weekday_cos": 0.001798903204485607,
+        "log_recent_units": 0.011256033707316742
+      },
+      "warnings": [
+        "Synthetic benchmark: results demonstrate a pipeline, not retailer performance or ROI.",
+        "Observational price associations are not causal elasticity; never optimize live prices from this benchmark.",
+        "One-day-ahead evaluation uses actual prior-day sales as they become available; this is not a 28-day forecast.",
+        "Calibration bands are empirical. Time dependence and regime shifts can invalidate nominal 80% coverage.",
+        "Price, competitor snapshot and promotion must be known at prediction time.",
+        "14 stock-constrained days excluded as targets; their recorded sales remain in lag features.",
+        "4 holdout days have prices outside the fitting range."
+      ],
+      "holdout": [
+        {
+          "day": "2026-08-30",
+          "actual": 2,
+          "predicted": 10.285,
+          "lower": 7.303,
+          "upper": 13.266,
+          "recent_7d": 17.286,
+          "same_weekday": 11
+        },
+        {
+          "day": "2026-08-31",
+          "actual": 12,
+          "predicted": 20.73,
+          "lower": 17.748,
+          "upper": 23.712,
+          "recent_7d": 16,
+          "same_weekday": 19
+        },
+        {
+          "day": "2026-09-01",
+          "actual": 15,
+          "predicted": 23.239,
+          "lower": 20.258,
+          "upper": 26.221,
+          "recent_7d": 15,
+          "same_weekday": 21
+        },
+        {
+          "day": "2026-09-03",
+          "actual": 8,
+          "predicted": 21.363,
+          "lower": 18.381,
+          "upper": 24.344,
+          "recent_7d": 11.143,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-04",
+          "actual": 5,
+          "predicted": 14.845,
+          "lower": 11.864,
+          "upper": 17.827,
+          "recent_7d": 10.143,
+          "same_weekday": 18
+        },
+        {
+          "day": "2026-09-05",
+          "actual": 9,
+          "predicted": 11.817,
+          "lower": 8.835,
+          "upper": 14.799,
+          "recent_7d": 8.286,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-06",
+          "actual": 5,
+          "predicted": 12.323,
+          "lower": 9.341,
+          "upper": 15.304,
+          "recent_7d": 7.714,
+          "same_weekday": 2
+        },
+        {
+          "day": "2026-09-07",
+          "actual": 16,
+          "predicted": 25.051,
+          "lower": 22.069,
+          "upper": 28.033,
+          "recent_7d": 8.143,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-08",
+          "actual": 13,
+          "predicted": 19.285,
+          "lower": 16.303,
+          "upper": 22.267,
+          "recent_7d": 8.714,
+          "same_weekday": 15
+        },
+        {
+          "day": "2026-09-09",
+          "actual": 3,
+          "predicted": 13.542,
+          "lower": 10.561,
+          "upper": 16.524,
+          "recent_7d": 8.429,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-10",
+          "actual": 10,
+          "predicted": 14.122,
+          "lower": 11.14,
+          "upper": 17.104,
+          "recent_7d": 8.429,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-11",
+          "actual": 6,
+          "predicted": 15.056,
+          "lower": 12.074,
+          "upper": 18.038,
+          "recent_7d": 8.714,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-12",
+          "actual": 8,
+          "predicted": 9.401,
+          "lower": 6.42,
+          "upper": 12.383,
+          "recent_7d": 8.857,
+          "same_weekday": 9
+        },
+        {
+          "day": "2026-09-13",
+          "actual": 7,
+          "predicted": 12.096,
+          "lower": 9.114,
+          "upper": 15.077,
+          "recent_7d": 8.714,
+          "same_weekday": 5
+        },
+        {
+          "day": "2026-09-14",
+          "actual": 8,
+          "predicted": 14.223,
+          "lower": 11.242,
+          "upper": 17.205,
+          "recent_7d": 9,
+          "same_weekday": 16
+        },
+        {
+          "day": "2026-09-15",
+          "actual": 4,
+          "predicted": 16.332,
+          "lower": 13.35,
+          "upper": 19.313,
+          "recent_7d": 7.857,
+          "same_weekday": 13
+        },
+        {
+          "day": "2026-09-16",
+          "actual": 12,
+          "predicted": 23.005,
+          "lower": 20.023,
+          "upper": 25.987,
+          "recent_7d": 6.571,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-18",
+          "actual": 14,
+          "predicted": 17.147,
+          "lower": 14.165,
+          "upper": 20.128,
+          "recent_7d": 6.857,
+          "same_weekday": 6
+        },
+        {
+          "day": "2026-09-19",
+          "actual": 5,
+          "predicted": 7.936,
+          "lower": 4.954,
+          "upper": 10.918,
+          "recent_7d": 8,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-20",
+          "actual": 7,
+          "predicted": 9.676,
+          "lower": 6.694,
+          "upper": 12.657,
+          "recent_7d": 7.571,
+          "same_weekday": 7
+        },
+        {
+          "day": "2026-09-21",
+          "actual": 7,
+          "predicted": 18.717,
+          "lower": 15.736,
+          "upper": 21.699,
+          "recent_7d": 7.571,
+          "same_weekday": 8
+        },
+        {
+          "day": "2026-09-22",
+          "actual": 14,
+          "predicted": 22.531,
+          "lower": 19.549,
+          "upper": 25.513,
+          "recent_7d": 7.429,
+          "same_weekday": 4
+        },
+        {
+          "day": "2026-09-23",
+          "actual": 11,
+          "predicted": 19.069,
+          "lower": 16.087,
+          "upper": 22.051,
+          "recent_7d": 8.857,
+          "same_weekday": 12
+        },
+        {
+          "day": "2026-09-24",
+          "actual": 2,
+          "predicted": 10.791,
+          "lower": 7.809,
+          "upper": 13.773,
+          "recent_7d": 8.714,
+          "same_weekday": 3
+        },
+        {
+          "day": "2026-09-26",
+          "actual": 0,
+          "predicted": 11.49,
+          "lower": 8.508,
+          "upper": 14.472,
+          "recent_7d": 7,
+          "same_weekday": 5
+        }
+      ]
+    }
+  ]
+}

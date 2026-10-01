@@ -57,7 +57,7 @@ def parse_price_input(value) -> Optional[int]:
         try:
             parsed = int(float(value))
             return parsed
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, OverflowError):
             return None
 
     raw_value = str(value).strip()
@@ -87,7 +87,7 @@ def parse_price_input(value) -> Optional[int]:
             parsed = float(normalized)
             return int(parsed)
         return int(normalized)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         return None
 
 
@@ -143,50 +143,8 @@ def format_price_preview(value) -> str:
     return f"{format_million_toman(parsed)} | {format_rial_equivalent(parsed)}"
 
 
-def humanize_label(value: str) -> str:
-    """
-    Convert a snake_case label into a readable title label.
-
-    Args:
-        value: Snake_case string.
-
-    Returns:
-        Human-readable label.
-    """
-    if not value or not isinstance(value, str):
-        return ""
-
-    label_map = {
-        "trust_builder": "Trust Builder",
-        "profit_protection": "Profit Protection",
-        "market_penetration": "Market Penetration",
-        "premium_positioning": "Premium Positioning",
-        "clearance_cashflow": "Clearance / Cashflow",
-        "increase_price": "Increase Price",
-        "decrease_price": "Decrease Price",
-        "hold_price": "Hold Price",
-        "urgent_review": "Urgent Review",
-        "low_stock": "Low Stock",
-        "available": "Available",
-        "unavailable": "Unavailable",
-    }
-    return label_map.get(value, value.replace("_", " ").title())
 
 
-def format_percent(value: float, decimals: int = 1) -> str:
-    """
-    Create a compact price preview string for display next to inputs.
-
-    Args:
-        value: Numeric or string price input.
-
-    Returns:
-        Compact formatted price string or empty string when no valid value is available.
-    """
-    parsed = parse_price_input(value)
-    if parsed is None or parsed <= 0:
-        return ""
-    return format_toman(parsed, compact=True)
 
 
 def format_percent(value: float, decimals: int = 1) -> str:
@@ -334,48 +292,6 @@ def get_action_color(action: str) -> str:
     }
     return colors.get(action, "#CCCCCC")
 
-def humanize_label(value: object) -> str:
-    """Convert internal snake_case labels into user-friendly display labels.
-
-    This only affects UI display. It must not change stored/internal values.
-    """
-    if value is None:
-        return ""
-
-    text = str(value).strip()
-    if not text:
-        return ""
-
-    explicit_labels = {
-        "trust_builder": "Trust Builder",
-        "balanced": "Balanced",
-        "profit_protection": "Profit Protection",
-        "market_penetration": "Market Penetration",
-        "premium_positioning": "Premium Positioning",
-        "clearance_cashflow": "Clearance / Cashflow",
-        "increase_price": "Increase Price",
-        "decrease_price": "Decrease Price",
-        "hold_price": "Hold Price",
-        "urgent_review": "Urgent Review",
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
-        "critical": "Critical",
-        "available": "Available",
-        "low_stock": "Low Stock",
-        "limited": "Limited",
-        "unavailable": "Unavailable",
-        "manual": "Manual",
-        "nobitex_usdt_proxy": "Nobitex USDT Proxy",
-        "navasan": "Navasan",
-        "tgju": "TGJU",
-        "bonbast": "Bonbast",
-    }
-
-    if text in explicit_labels:
-        return explicit_labels[text]
-
-    return text.replace("_", " ").replace("-", " ").title()
 
 
 def _valid_number(value: object) -> Optional[float]:

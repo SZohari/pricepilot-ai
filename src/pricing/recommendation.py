@@ -1,5 +1,6 @@
 """Main recommendation engine for pricing decisions."""
 
+import math
 from typing import Dict, List
 from src.pricing.rules import calculate_current_margin, apply_pricing_rules, determine_action
 from src.pricing.risk import calculate_risk_level
@@ -27,6 +28,8 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
         Dictionary with recommendation details including strategy-based pricing (if Phase 2)
     """
     # Determine if this is Phase 2 data (has our_current_price) or MVP data (has current_price)
+    if not math.isfinite(usd_shock) or not -50 <= usd_shock <= 100:
+        raise ValueError("usd_shock must be finite and between -50 and 100")
     is_phase2 = "our_current_price" in row
     
     # Extract product metadata
@@ -59,7 +62,13 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
         competitor_max = market_max
         
         # Phase 2 specific fields
-        theoretical_toman = _safe_number(row.get("theoretical_toman_price"), 0.0)
+        theoretical_toman = _safe_number(row.get("theoretical_toman_price"),
+                                         _safe_number(row.get("base_usd_price")) * _safe_number(row.get("usd_rate")))
+        # Explicit legacy stress scenario: full shock flows into replacement cost and reference.
+        scenario_multiplier = 1 + usd_shock / 100
+        our_cost_price *= scenario_multiplier
+        cost_price = our_cost_price
+        theoretical_toman *= scenario_multiplier
         iran_premium = _calculate_iran_market_premium(market_median, theoretical_toman)
         
         # Calculate strategy-based prices
@@ -75,6 +84,7 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
             "theoretical_toman_price": theoretical_toman,
         })
         strategy_result = select_strategy_price(strategy_row, our_strategy)
+        our_strategy = strategy_result["strategy"]
         recommended_price = strategy_result["selected_strategy_price"]
         strategy_prices = strategy_result["strategy_prices"]
         strategy_explanation = strategy_result["strategy_explanation"]
@@ -171,6 +181,7 @@ def recommend_price(row: dict, usd_shock: float = 0.0, strategy: str = None) -> 
         "action": action,
         "risk_level": risk_level,
         "current_margin": float(current_margin),
+        "margin_basis": "legacy_cost_markup",
         "expected_margin": float(expected_margin),
         "competitor_position": competitor_position,
         "explanation": explanation,

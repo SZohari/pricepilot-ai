@@ -21,8 +21,15 @@ STRATEGY_DESCRIPTIONS = {
     "profit_protection": "Preserve margin, price above median if possible",
     "market_penetration": "Aggressive below-market pricing to gain share",
     "premium_positioning": "Price above market to signal quality/exclusivity",
-    "clearance_cashflow": "Price at/below cost to clear inventory and generate cash",
+    "clearance_cashflow": "Discount inventory while protecting the minimum cost markup",
 }
+
+
+def normalize_strategy(value) -> str:
+    if not isinstance(value, str):
+        return "balanced"
+    value = value.strip().lower().replace(" / ", "_").replace(" ", "_")
+    return value if value in VALID_STRATEGIES else "balanced"
 
 
 def _safe_number(value, fallback: float = 0.0) -> float:
@@ -182,7 +189,7 @@ def calculate_strategy_prices(row: dict) -> Dict[str, float]:
     )
     prices["clearance_cashflow"] = round_to_retail_price(clearance_price)
     
-    return prices
+    return {key: max(value, math.ceil(min_allowed / 10_000) * 10_000) for key, value in prices.items()}
 
 
 def select_strategy_price(row: dict, strategy: str = None) -> Dict:
@@ -197,7 +204,8 @@ def select_strategy_price(row: dict, strategy: str = None) -> Dict:
         Dictionary with selected strategy and calculated prices
     """
     # Default to "balanced" if strategy not specified or invalid
-    if strategy is None or strategy not in VALID_STRATEGIES:
+    strategy = normalize_strategy(strategy)
+    if strategy not in VALID_STRATEGIES:
         strategy = "balanced"
     
     # Calculate all strategy prices
@@ -286,7 +294,7 @@ def _build_strategy_explanation(
             lines.append(f"This represents a {abs(price_change_pct):.1f}% {direction} from current price.")
     
     # Margin context
-    lines.append(f"Expected margin: {expected_margin:.1%}")
+    lines.append(f"Expected cost markup: {expected_margin:.1%}")
     
     # Market context
     if market_median > 0:

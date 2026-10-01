@@ -231,8 +231,9 @@ class TestPhase2Schema:
         })
         
         is_valid, issues = validate_csv_data(df)
-        # Current validation doesn't check market price order, but data should still be valid
-        assert is_valid is True
+        # Inverted market bounds must be rejected before pricing.
+        assert is_valid is False
+        assert any("min <= median <= max" in issue for issue in issues)
 
 
 if __name__ == "__main__":

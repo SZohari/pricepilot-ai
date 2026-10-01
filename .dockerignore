@@ -6,3 +6,9 @@ __pycache__/
 data/processed/*.tmp
 *.log
 logs/
+
+.venv-review/
+.venv-deploy-check/
+data/workspaces/
+.env
+.env.*

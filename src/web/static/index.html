@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1018">
+<title>PricePilot — A better price. A clearer next step.</title>
+<meta name="description" content="Work through a pricing decision for your business. Check costs, understand your customers and try a small change with a clear plan.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PricePilot — From business inputs to a pricing decision">
+<meta property="og:description" content="Explore an interactive smartwatch-shop demo: check costs, review evidence and plan a measured price test. A Data + AI + Business portfolio MVP with simulated business data.">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css"><link rel="stylesheet" href="/static/dark.css"><link rel="stylesheet" href="/static/advisor.css"><link rel="stylesheet" href="/static/discovery.css">
+<link rel="stylesheet" href="/static/fonts.css"><link rel="stylesheet" href="/static/homepage.css">
+<link rel="preload" href="/static/assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/retail.css"><link rel="stylesheet" href="/static/journey.css">
+<script type="module" src="/static/app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<div id="app">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="#overview"><span class="brand-mark">p<span></span></span><span>PricePilot<span class="brand-dot">.</span></span></a>
+    <div class="workspace-badge"><span class="workspace-logo">P</span><div><strong>Pricing workspace</strong><small>Germany · EUR</small></div></div>
+    <p class="nav-caption">WORKSPACE</p>
+    <nav id="navigation"></nav><button class="text-button reset-example" data-action="reset-demo">↺ Reset store example</button>
+    <div class="sidebar-bottom">
+      <div class="demo-card"><span class="live-dot"></span><strong>Interactive MVP</strong><p>Your inputs or a fictional case.<br>Advice you can follow up.</p><button class="text-button" id="about-button">About this MVP <span>↗</span></button></div>
+      <div class="profile"><div class="avatar">PP</div><div><strong>Interactive MVP</strong><small>Data / AI / Business</small></div></div>
+    </div>
+  </aside>
+  <div class="app-body">
+    <header id="experience-nav" class="experience-nav"></header>
+    <header class="topbar">
+      <button id="mobile-menu" class="icon-button" aria-label="Toggle navigation"></button>
+      <div class="breadcrumb">Workspace <span>/</span> <strong id="breadcrumb-page">Overview</strong></div>
+      <div class="topbar-right"><label class="global-search"><span id="search-icon"></span><input id="global-search" placeholder="Search products..." aria-label="Search products"><kbd>Ctrl K</kbd></label><button id="refresh-button" class="icon-button" title="Refresh workspace" aria-label="Refresh workspace"></button><span class="avatar small">PP</span></div>
+    </header>
+    <main id="main" tabindex="-1"><div class="loading-state"><span class="spinner"></span><h2>Preparing your workspace</h2><p>Connecting products, market evidence and pricing decisions.</p></div></main>
+    <footer class="app-footer"><span><span class="live-dot"></span> Explainable by design. Human decisions, always.</span><span id="footer-context">Germany / EUR</span></footer>
+  </div>
+</div>
+<dialog id="detail-dialog" class="detail-dialog" aria-label="Product detail"></dialog>
+<dialog id="form-dialog" class="form-dialog" aria-label="Workspace form"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+</body></html>

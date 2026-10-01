@@ -1,8 +1,8 @@
-streamlit
-pandas
-numpy
-plotly
-pytest
-fastapi
-uvicorn
-httpx
+streamlit==1.57.0
+pandas==3.0.1
+numpy==2.3.5
+plotly==6.7.0
+fastapi==0.115.12
+uvicorn==0.34.2
+httpx==0.28.1
+pydantic==2.13.5

@@ -70,7 +70,16 @@ def aggregate_market_observations(df: pd.DataFrame) -> pd.DataFrame:
         model = first_row.get('model', 'Unknown')
         
         # Calculate price statistics (ensure float conversion)
-        prices = pd.to_numeric(group['listed_price'], errors='coerce').dropna()
+        eligible = group[group['availability_status'].isin(['available', 'low_stock', 'limited'])].copy()
+        if 'observed_at' in group.columns:
+            # Historical adapter uses the snapshot's latest date; v1 requires an explicit analysis date.
+            dated = group.assign(_date=pd.to_datetime(group['observed_at'], errors='coerce', utc=True))
+            reference = pd.to_datetime(df['observed_at'], errors='coerce', utc=True).max()
+            dated = dated.sort_values('_date').drop_duplicates('seller_name', keep='last')
+            eligible = dated[(reference - dated['_date']).dt.days.le(14) &
+                             dated['availability_status'].isin(['available', 'low_stock', 'limited'])]
+        prices = pd.to_numeric(eligible['listed_price'], errors='coerce').dropna()
+        prices = prices[(prices > 0) & (prices < float('inf'))]
         
         if len(prices) == 0:
             # Skip products with no price data
@@ -103,6 +112,8 @@ def aggregate_market_observations(df: pd.DataFrame) -> pd.DataFrame:
             'price_spread_percent': float(spread_pct),
         })
     
+    if not results:
+        return aggregate_market_observations(pd.DataFrame())
     return pd.DataFrame(results)
 
 
@@ -144,7 +155,7 @@ def calculate_seller_counts(df: pd.DataFrame) -> Dict[str, int]:
     """
     total_sellers = df['seller_name'].nunique()
     
-    available_statuses = ['available', 'low_stock']
+    available_statuses = ['available', 'low_stock', 'limited']
     available_rows = df[df['availability_status'].isin(available_statuses)]
     available_sellers = available_rows['seller_name'].nunique()
     
@@ -257,12 +268,15 @@ def validate_market_observations(df: pd.DataFrame) -> tuple[bool, List[str]]:
     if price_col is not None:
         # Convert to numeric, coercing errors to NaN
         numeric_prices = pd.to_numeric(price_col, errors='coerce')
+        invalid_prices = numeric_prices.isna() | ~numeric_prices.map(lambda value: pd.notna(value) and 0 < value < float('inf'))
+        if invalid_prices.any():
+            issues.append("Prices must be finite positive numbers")
         negative_prices = (numeric_prices < 0).sum()
         if negative_prices > 0:
             issues.append(f"Found {negative_prices} negative prices")
     
     # Check for missing product_ids
-    missing_ids = df['product_id'].isna().sum()
+    missing_ids = df['product_id'].isna().sum() if 'product_id' in df.columns else 0
     if missing_ids > 0:
         issues.append(f"Found {missing_ids} rows with missing product_id")
     

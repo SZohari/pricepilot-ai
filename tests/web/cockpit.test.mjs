@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {simulate,defaults} from '../../src/web/static/cockpit.js';
+const p={current_price_gross:119,replacement_cost_net:60,variable_cost_net:5,vat_rate:.19,fee_rate:.02,minimum_margin:.1,sales_30d:20,inventory:100};
+test('baseline reconciles VAT, contribution and units',()=>{const r=simulate(p);assert.equal(r.units,20);assert.equal(r.unit,33);assert.equal(r.contribution,660);});
+test('discount can increase sales while reducing contribution',()=>{const b=simulate(p),r=simulate(p,{...defaults(),price:-30});assert.ok(r.units>b.units);assert.ok(r.contribution<b.contribution);assert.ok(r.price<r.floor);});
+test('cost shocks change economics but do not invent demand',()=>{const r=simulate(p,{...defaults(),cost:50});assert.equal(r.units,20);assert.equal(r.unit,3);assert.ok(r.floor>simulate(p).floor);});
+test('stock caps sales including zero inventory',()=>{assert.equal(simulate({...p,inventory:0}).units,0);const r=simulate({...p,inventory:3});assert.equal(r.units,3);assert.equal(r.limited,true);});
+test('zero historical sales never fabricate positive demand',()=>{assert.equal(simulate({...p,sales_30d:0},{...defaults(),price:-40}).units,0);});
+test('equal market and own-price shifts cancel relative-price response',()=>{assert.equal(simulate(p,{...defaults(),market:-20,price:-20}).units,20);});
+test('zero elasticity removes price response, demand ageing remains',()=>{assert.equal(simulate(p,{...defaults(),elasticity:0,price:40,demand:-50}).units,10);});

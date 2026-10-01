@@ -1,6 +1,7 @@
 """Pydantic request and response contracts for the PricePilot API."""
 
-from pydantic import BaseModel, ConfigDict
+import math
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 RECOMMENDATION_EXAMPLE = {
@@ -54,6 +55,7 @@ class RecommendationRequest(BaseModel):
 
     model_config = ConfigDict(
         extra="allow",
+        allow_inf_nan=False,
         json_schema_extra={"example": RECOMMENDATION_EXAMPLE},
     )
 
@@ -75,6 +77,42 @@ class RecommendationRequest(BaseModel):
     our_strategy: str | None = None
 
 
+    @model_validator(mode="after")
+    def validate_pricing_inputs(self):
+        data = self.model_dump(exclude_none=True)
+        if "our_current_price" in data:
+            required = ["our_current_price", "our_cost_price", "market_min_price",
+                        "market_median_price", "market_max_price"]
+            price_fields = required
+            low, mid, high = "market_min_price", "market_median_price", "market_max_price"
+        else:
+            required = ["current_price", "cost_price", "inventory", "target_margin",
+                        "competitor_min_price", "competitor_median_price", "competitor_max_price",
+                        "usd_change_7d", "sales_7d", "sales_30d", "conversion_rate"]
+            price_fields = ["current_price", "cost_price", "competitor_min_price",
+                            "competitor_median_price", "competitor_max_price"]
+            low, mid, high = "competitor_min_price", "competitor_median_price", "competitor_max_price"
+        missing = [key for key in required if key not in data]
+        if missing:
+            raise ValueError("Missing pricing fields: " + ", ".join(missing))
+        for key in price_fields:
+            value = data[key]
+            if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or value <= 0:
+                raise ValueError(key + " must be a finite positive number")
+        if not data[low] <= data[mid] <= data[high]:
+            raise ValueError("Market prices must satisfy min <= median <= max")
+        for key in ["inventory", "sales_7d", "sales_30d", "our_inventory", "our_sales_7d", "our_sales_30d"]:
+            if key in data and (not math.isfinite(float(data[key])) or float(data[key]) < 0 or not float(data[key]).is_integer()):
+                raise ValueError(key + " must be a nonnegative integer")
+        for key in ["target_margin", "our_target_margin", "conversion_rate"]:
+            if key in data and not 0 <= float(data[key]) <= 1:
+                raise ValueError(key + " must be between zero and one")
+        for key in ["base_usd_price", "usd_rate", "theoretical_toman_price"]:
+            if key in data and (not math.isfinite(float(data[key])) or float(data[key]) <= 0):
+                raise ValueError(key + " must be positive and finite")
+        return self
+
+
 class RecommendationResponse(BaseModel):
     """Key output fields from an explainable pricing recommendation."""
 
@@ -84,6 +122,16 @@ class RecommendationResponse(BaseModel):
     current_price: float | int | None = None
     action: str | None = None
     risk_level: str | None = None
+    brand: str | None = None
+    model: str | None = None
+    category: str | None = None
+    current_margin: float | None = None
+    expected_margin: float | None = None
+    margin_basis: str = "legacy_cost_markup"
+    competitor_position: str | None = None
+    theoretical_toman_price: float | None = None
+    iran_market_premium_pct: float | None = None
+    strategy_prices: dict[str, float] | None = None
     selected_strategy: str | None = None
     selected_strategy_price: float | int | None = None
     strategy_explanation: str | None = None
