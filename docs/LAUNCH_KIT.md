@@ -1,42 +1,21 @@
 # PricePilot launch kit
 
-Prepared 2026-10-01. This is a draft, not a published announcement. The public
-workflow has been checked and the live link below is ready to use.
+Published 2026-10-01 from Sepas Zohari's LinkedIn profile, with public visibility.
+[View the announcement](https://www.linkedin.com/feed/update/urn:li:activity:7511459294463193088/).
 
 ## LinkedIn post — English
 
-Would lowering a price actually help this business?
+The final publication copy is in [LINKEDIN_POST.txt](LINKEDIN_POST.txt).
 
-I built PricePilot to explore that question through a working pricing decision,
-from the business inputs to an action the owner can review.
+Prepared attachments, in order:
 
-The demo follows a fictional German smartwatch retailer. You can change supplier
-costs, inspect competitor evidence, record what customers are saying, and compare
-a proposed price with the sales it would need to justify the change.
+1. [Pricing decision](screenshots/pricing-decision.jpg).
+2. [Demand model evaluation](screenshots/demand-evaluation.jpg).
+3. [Welcome page](../src/web/static/assets/images/pricepilot-preview.jpg).
 
-One design choice matters to me: sometimes the next useful action is to clarify
-a warranty, improve visibility or collect missing evidence before testing a price.
-The software should make those gaps visible too.
-
-Under the hood:
-
-- Python/FastAPI, validated imports and traceable decision records.
-- An exact-product competitor collector for supported, configured URLs.
-- A separate trained demand model, evaluated on later data against simple
-  baselines, including an example where a demand shock makes it fail.
-
-The pricing workflow uses explicit accounting and decision rules. The ML model
-does not claim to discover an optimal price. The demo's business data is synthetic;
-real merchant validation is the next step.
-
-Try the interactive demo: https://sepas.eu.pythonanywhere.com/
-Explore the code: https://github.com/SZohari/pricepilot-ai
-
-I'm exploring opportunities at the intersection of data, applied AI and business
-in Germany. I'd welcome feedback from people building decision tools or working
-with retail pricing: what evidence would you need before trying a new price?
-
-#AppliedAI #DataScience #Python #RetailAnalytics
+These are real interface screenshots. LinkedIn confirmed successful publication
+with all three attachments. The post identifies the business data as simulated
+and links to the public demo and GitHub repository. No paid promotion was enabled.
 
 ## 60–75 second recording
 
@@ -79,4 +58,6 @@ workspace-token details. Start the public service before recording if it has sle
   Separate visitor data and protected API writes were also checked.
 - The public page's social preview uses an actual screenshot. The site is an MVP;
   live competitor coverage and merchant ROI have not been established.
-- No LinkedIn post or video has been published by this release task.
+- The English LinkedIn announcement was published with three screenshots on
+  2026-10-01; the direct link is at the top of this document. No video has been
+  recorded or published by this release task.

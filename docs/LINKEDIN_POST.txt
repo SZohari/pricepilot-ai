@@ -1,0 +1,28 @@
+Before cutting a price, how many extra sales would make it worthwhile?
+
+I've launched PricePilot, an interactive pricing decision-support MVP connecting data, machine learning and business judgement.
+
+The demo follows a fictional German watch retailer through five steps:
+Your shop → Costs & limits → Market & customers → Choose a move → Your plan.
+
+One example: reducing a €449 price by 5% leaves €106.78 per sale instead of €125.26, before fixed costs. The trial needs at least 10 sales in 14 days to meet the shop's contribution and sales limits.
+
+That's a condition the business must meet—not a prediction that those customers will arrive.
+
+Customer context can change the next action. If too few people see the offer, the advice can be to investigate visibility before discounting. Questions about trust, delivery or product fit can also pause a price test.
+
+The ML lab trains a demand model and compares it with simple baselines on later, unseen days. It also shows a demand-shock case where the model loses to a simpler method.
+
+Built with Python, FastAPI, NumPy, SQLite and JavaScript, with validated inputs, traceable decisions and a guided interface.
+
+This is a portfolio MVP with simulated business data. Real merchant validation is the next milestone; no store prices are changed automatically.
+
+Try it—no account or installation needed:
+https://sepas.eu.pythonanywhere.com/
+
+Code, screenshots and method:
+https://github.com/SZohari/pricepilot-ai
+
+I'm exploring opportunities combining data, applied AI and business in Germany. I'd welcome feedback: what would you need to trust a tool like this with a pricing decision?
+
+#AppliedAI #DataScience #RetailAnalytics
