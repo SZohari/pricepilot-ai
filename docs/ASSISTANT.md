@@ -111,6 +111,17 @@ Add `--model /absolute/path/to/model.gguf` to require real generation for the
 discount and customer-context checks. The command fails if it only gets a
 fallback; review the generated claims against their excerpts before enabling it.
 
+To check the deployed visitor experience from any machine with the assistant
+extra installed, use a disposable demo session:
+
+```bash
+python -m scripts.verify_assistant --url https://sepas.eu.pythonanywhere.com --require-generation
+```
+
+This checks both questions, requires actual generation, and fails on fallback.
+It prints no session token and makes no saved product edits. Omit
+`--require-generation` to verify only the source and calculation path.
+
 On the free host, disable Python bytecode caching with `PYTHONDONTWRITEBYTECODE=1`
 to keep disk headroom. The model plus dependencies leave little room for growth.
 No weight file, API key or merchant data is committed to Git.
