@@ -93,6 +93,8 @@ shows where its evidence came from. Nothing is published or silently saved.
 optional server-owned GGUF or local Ollama model adds a sourced RAG explanation;
 the pricing engine still owns every monetary calculation. Without a configured
 model, **Evidence mode** remains explicit and usable, without an AI subscription.
+The public assistant and retrieval workflow are deployed; real-model generation
+is still under verification and should not yet be presented as a working AI demo.
 [Setup, deployment status and limitations →](docs/ASSISTANT.md)
 
 ## Under the hood

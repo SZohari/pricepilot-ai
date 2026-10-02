@@ -60,7 +60,7 @@ must expand it when starting the app, not while creating the website.
 ```bash
 PRICEPILOT_DOMAIN='YOURUSERNAME.eu.pythonanywhere.com'
 ~/.virtualenvs/pricepilot/bin/pa website get
-~/.virtualenvs/pricepilot/bin/pa website create --domain "$PRICEPILOT_DOMAIN" --command "/usr/bin/env PRICEPILOT_PUBLIC_DEMO=1 PRICEPILOT_ALLOWED_HOSTS=$PRICEPILOT_DOMAIN $HOME/.virtualenvs/pricepilot/bin/python -m uvicorn --app-dir $HOME/pricepilot-ai --uds \${DOMAIN_SOCKET} --workers 1 src.web.app:app"
+~/.virtualenvs/pricepilot/bin/pa website create --domain "$PRICEPILOT_DOMAIN" --command "/usr/bin/env PYTHONDONTWRITEBYTECODE=1 PRICEPILOT_PUBLIC_DEMO=1 PRICEPILOT_ALLOWED_HOSTS=$PRICEPILOT_DOMAIN $HOME/.virtualenvs/pricepilot/bin/python -m uvicorn --app-dir $HOME/pricepilot-ai --uds \${DOMAIN_SOCKET} --workers 1 --timeout-graceful-shutdown 10 src.web.app:app"
 ```
 
 Do not set `PRICEPILOT_DB_PATH`: public mode refuses a merchant database. Public
@@ -98,6 +98,13 @@ web requirements again before reloading:
 
 Reloading clears in-memory demo sessions. Run the public checks again after an
 update. GitHub pushes do not automatically deploy this host.
+
+For the optional LangChain/LangGraph assistant and a server-owned model, follow
+[the assistant deployment guide](ASSISTANT.md). Model weights are separate from
+the web package. Check the disk quota before installation. The hard inference
+deadline and Uvicorn shutdown timeout keep a stalled native model from holding
+a website reload open indefinitely. Source-only mode remains available when
+generation fails; this fallback is not a successful LLM test.
 
 ## Official references
 

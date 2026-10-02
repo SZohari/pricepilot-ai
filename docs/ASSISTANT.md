@@ -69,7 +69,7 @@ visitor-selected host. Proxies and redirects are disabled on this connection.
 Public-demo mode disables this model connection. Remote cloud AI providers are
 not included in this release.
 
-The model must produce a short explanation and existing source IDs. Unknown IDs,
+The Ollama model must produce a short explanation and existing source IDs. Unknown IDs,
 invalid structured output, numerical claims in the narrative, connection errors
 and timeouts fall back visibly to Evidence mode. Prices and sales requirements
 always come from the pricing engine, never generated text. Background text cannot
@@ -79,10 +79,15 @@ graph, and this feature adds no conversation logs.
 ## Embedded model on a small server
 
 Install `requirements-inference.txt` and set `PRICEPILOT_GGUF_MODEL_PATH` to an
-already downloaded GGUF file outside the repository. The model runs in the web
-process with llama-cpp-python; public mode supports this backend. Use one web
+already downloaded GGUF file outside the repository. The model runs in a separate
+reusable subprocess with llama-cpp-python; public mode supports this backend. Use one web
 worker. One generation runs at a time across sessions; a busy model falls back to
-sources instead of building a queue. Context and output lengths are bounded.
+sources instead of building a queue. A hard 30-second deadline terminates a stuck
+model process, while the pricing app stays available. Model loading is included
+in that deadline. Context and output lengths are bounded. The small embedded
+model receives at most three retrieved excerpts and writes one short sentence.
+The app attaches those context IDs itself; they are context references, not proof
+that every generated claim is supported. Numerical claims still cause fallback.
 
 If the host cannot edit a running website's startup command, the owner can instead
 create `~/.config/pricepilot/assistant.json` containing
@@ -135,18 +140,34 @@ Upstream references: [LangGraph](https://docs.langchain.com/oss/python/langgraph
 
 ### Verification status, 2026-10-02
 
-The full Python suite passed 568 tests; the 85 JavaScript tests also passed. Two
-Python tests were skipped: the optional legacy Streamlit/PyArrow UI and the new
-LangGraph parity test. Downloads from the Python package file host timed out, so
-the optional LangChain/LangGraph environment could not be installed on this
-machine. The focused assistant suite then passed 16 tests, with the graph test
-still skipped locally. CI installs the extra and runs the assistant tests separately.
+The full Python suite passed 572 tests, with two skips (the optional legacy
+Streamlit/PyArrow UI and LangGraph parity test). The 85 JavaScript tests passed.
+After the inference changes, the focused suite passed 19 tests with the graph
+test still skipped locally. CI installs the graph extra separately; the deployed
+`9bdbcee` build's [quality checks passed](https://github.com/SZohari/pricepilot-ai/actions/runs/37026329384).
+These are software checks, not a model-quality evaluation.
 
-LangChain Core 1.6.6, LangGraph 1.2.12 and llama-cpp-python 0.3.36 are now installed
-on PythonAnywhere. Its outbound proxy rejects the model file CDN; local binary
-downloads also failed. Real-model generation is therefore not yet verified.
+The public site serves version 1.8.0. LangChain Core 1.6.6, LangGraph 1.2.12 and
+llama-cpp-python 0.3.36 are installed on PythonAnywhere. The owner downloaded the
+model; it was uploaded, assembled and SHA256-verified on the host. The model CDN
+restriction is no longer the installation blocker. Real LangGraph retrieval was
+exercised on the host and through the public API.
 
-Browser inspection of the local app was denied by a saved browser-access setting.
-Interaction races were checked with the existing project's unit-test style, but
-visual layout and browser interaction need a separate check on the public service.
-Deployment and public verification are recorded below when complete.
+Public browser checks exercised the discount scenario and an unverified customer
+note. The discount changed the candidate price from EUR 449 to EUR 426.55 and
+contribution from EUR 125.26 to EUR 106.78. The engine required ten sales against
+the fractional 8.4-unit baseline in the fourteen-day scenario. These figures are
+from the fictional shop, not measured merchant results.
+
+**Generative mode is not yet verified as working.** The last completed model
+requests fell back after roughly 31 seconds. An earlier in-process model stalled
+a website reload; the site was restored and inference moved to a killable child
+process. The subsequent short-prose build (`9bdbcee`) was deployed, but a network
+connection failure interrupted its real-model retest. The single-thread inference
+adjustment (`515aeea`) is in GitHub and still needs deployment and a successful
+live check. A configured model is not proof that it can answer successfully.
+
+Before treating AI mode as ready, finish the pending deployment, run both real
+generation checks above without fallback, review the claims against the excerpts,
+and check the public browser again. Do not present Evidence-mode answers as LLM
+output. No API key or paid inference service is configured.
