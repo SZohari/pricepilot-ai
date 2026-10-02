@@ -46,6 +46,9 @@ def embedded_generator(path):
             model = embedded_model(path)
             model.reset()
             schema = ModelExplanation.model_json_schema()
+            # The token budget bounds generation; enforce character bounds afterward.
+            # Expanding maxLength into thousands of grammar branches is wasteful.
+            schema["properties"]["explanation"] = {"type": "string"}
             schema["properties"]["source_ids"]["items"] = {"type": "string", "enum": [s["id"] for s in sources]}
             deadline = time.monotonic() + 35
             stream = model.create_chat_completion(messages=model_messages(question, sources),
