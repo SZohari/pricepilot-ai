@@ -2,6 +2,7 @@
 import atexit
 import json
 import multiprocessing
+import time
 
 _process = None
 _connection = None
@@ -26,7 +27,9 @@ def stop_worker():
 
 def _serve(connection, path):
     # Imported only in the child. A native crash cannot take down FastAPI.
+    connection.send({'phase': 'loading_library'})
     from llama_cpp import Llama
+    connection.send({'phase': 'loading_model'})
     model = Llama(model_path=path, n_ctx=2048, n_threads=2, n_threads_batch=2,
                   n_batch=256, verbose=False, chat_format="chatml", seed=41)
     while True:
@@ -36,6 +39,7 @@ def _serve(connection, path):
             return
         try:
             model.reset()
+            connection.send({'phase': 'generating'})
             result = model.create_chat_completion(messages=messages,
                 response_format={"type": "json_object", "schema": schema},
                 temperature=0, max_tokens=160)
@@ -60,9 +64,16 @@ def request_generation(path, messages, schema, timeout=30):
         child.close()
     try:
         _connection.send((messages, schema))
-        if not _connection.poll(timeout):
-            raise TimeoutError('The model exceeded its response budget')
-        result = _connection.recv()
+        deadline, phase = time.monotonic() + timeout, 'starting_worker'
+        while True:
+            if not _connection.poll(max(0, deadline-time.monotonic())):
+                error = TimeoutError('The model exceeded its response budget')
+                error.phase = phase
+                raise error
+            result = _connection.recv()
+            if 'phase' not in result:
+                break
+            phase = result['phase']
         if 'answer' not in result:
             raise ValueError('The model did not finish a structured answer')
         return result['answer']
