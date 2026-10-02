@@ -10,6 +10,7 @@ import json
 from math import log
 import re
 from typing import TypedDict
+import time
 
 from src.domain.assistant import AssistantQuestion, ModelExplanation
 
@@ -125,6 +126,7 @@ def compose(state, generator=None):
         return {"generated": None, "fallback": None}
     if generator is None:
         return {"generated": None, "fallback": "No local language model is configured. Showing source excerpts and calculations."}
+    started = time.monotonic()
     try:
         result = ModelExplanation.model_validate(generator(state["request"].question, state["selected"]))
         allowed = {d["id"] for d in state["selected"]}
@@ -133,9 +135,12 @@ def compose(state, generator=None):
         # Numbers and price instructions are deliberately kept in the engine panel.
         if re.search(r"\d|€|\bEUR\b", result.explanation, re.I):
             raise ValueError("The language model must leave quantities to the engine")
-        return {"generated": result.model_dump(), "fallback": None}
-    except (ValueError, TimeoutError, OSError):
-        return {"generated": None, "fallback": "The local model did not return a usable sourced answer. Showing verified calculations and source excerpts."}
+        return {"generated": result.model_dump(), "fallback": None, "generation_seconds": round(time.monotonic()-started, 2)}
+    except (ValueError, TimeoutError, OSError) as exc:
+        code = "timeout" if isinstance(exc, TimeoutError) else "invalid_output" if isinstance(exc, ValueError) else "unavailable"
+        return {"generated": None, "fallback_code": code, "generation_seconds": round(time.monotonic()-started, 2),
+            "fallback": "The model took too long. Showing calculations and sources." if code == "timeout" else
+            "The local model did not return a usable sourced answer. Showing verified calculations and source excerpts."}
 
 
 def package_answer(state):
@@ -145,6 +150,7 @@ def package_answer(state):
     return dict(question=request.question, product_id=item["product"]["product_id"], product_name=item["product"]["name"],
         version=item["version"], as_of=r["as_of"], fingerprint=r["fingerprint"], context_digest=digest,
         mode="rag" if state["generated"] else "evidence", explanation=state["generated"], fallback=state["fallback"],
+        fallback_code=state.get("fallback_code"), generation_seconds=state.get("generation_seconds"),
         matched=bool(state["selected"]), sources=state["selected"],
         decision=dict(title=r["title"], why=r["why"], next_step=r["next_step"], action=r["action"], can_start_test=r["can_start_test"]),
         calculation=dict(current_price=i["current_price"], candidate_price=i["considered_price"],
@@ -165,6 +171,8 @@ class AssistantState(TypedDict, total=False):
     selected: list
     generated: dict | None
     fallback: str | None
+    fallback_code: str | None
+    generation_seconds: float
     answer: dict
     workflow_engine: str
 

@@ -24,7 +24,7 @@ SYSTEM_PROMPT = (
 
 def model_messages(question, sources):
     # Keep the context bounded for the small CPU model. The UI retains full excerpts.
-    context = [{"id": s["id"], "title": s["title"], "provenance": s["provenance"], "text": s["text"][:900]}
+    context = [{"id": s["id"], "title": s["title"], "provenance": s["provenance"], "text": s["text"][:450]}
                for s in sources]
     return [dict(role="system", content=SYSTEM_PROMPT), dict(role="user", content=json.dumps(
         dict(question=question, sources=context), ensure_ascii=False))]
@@ -33,8 +33,8 @@ def model_messages(question, sources):
 @lru_cache(maxsize=1)
 def embedded_model(path):
     from llama_cpp import Llama
-    return Llama(model_path=path, n_ctx=3072, n_threads=2, n_threads_batch=2,
-                 n_batch=128, verbose=False, chat_format="chatml", seed=41)
+    return Llama(model_path=path, n_ctx=2048, n_threads=2, n_threads_batch=2,
+                 n_batch=256, verbose=False, chat_format="chatml", seed=41)
 
 
 def embedded_generator(path):

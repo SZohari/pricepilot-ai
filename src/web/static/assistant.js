@@ -112,6 +112,7 @@ export async function bindAssistant(S,main,api,toast){
     const token=++generation;pending=true;f.querySelector('button[type=submit]').disabled=true;
     status(a.mode==='rag'?'Checking the scenario and asking the model… This may take a moment.':'Checking the scenario and finding relevant sources…');
     root.querySelector('#assistant-output').setAttribute('aria-busy','true');
+    root.querySelector('#assistant-output').innerHTML='<div class="assistant-placeholder"><h2>Following the evidence…</h2><p>Checking this scenario and finding the sources behind the answer.</p></div>';
     try{const result=await api('/api/v1/assistant/ask',{method:'POST',body});if(!valid()||token!==generation)return;
       root.querySelector('#assistant-output').innerHTML=answerHTML(result);status('Answer ready. No price has been changed.');
     }catch(error){if(valid()&&token===generation){status(error.message);toast(error.message);}}
