@@ -11,7 +11,9 @@ from src.web.app import create_app
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, tmp_path):
+    from src.api import assistant
+    monkeypatch.setattr(assistant, 'MODEL_CONFIG', tmp_path / 'assistant.json')
     monkeypatch.delenv('PRICEPILOT_DB_PATH', raising=False)
     monkeypatch.delenv('PRICEPILOT_PUBLIC_DEMO', raising=False)
     monkeypatch.delenv('PRICEPILOT_OLLAMA_MODEL', raising=False)
@@ -200,3 +202,20 @@ def test_public_model_requires_installed_backend_and_an_existing_file(monkeypatc
     assert configured['workflow'] == 'langgraph'
     monkeypatch.setattr(assistant, 'find_spec', lambda name: None if name == 'llama_cpp' else object())
     assert not assistant.capabilities()['rag_configured']
+
+
+def test_owner_model_config_is_bounded_and_environment_has_priority(monkeypatch, tmp_path):
+    from src.api import assistant
+    config = tmp_path / 'assistant.json'
+    monkeypatch.setattr(assistant, 'MODEL_CONFIG', config)
+    monkeypatch.delenv('PRICEPILOT_GGUF_MODEL_PATH', raising=False)
+    import json
+    path = str(tmp_path / 'owner.gguf')
+    config.write_text(json.dumps({'gguf_model_path': path}), encoding='utf-8')
+    assert assistant.model_path() == path
+    monkeypatch.setenv('PRICEPILOT_GGUF_MODEL_PATH', '')
+    assert assistant.model_path() == ''
+    monkeypatch.delenv('PRICEPILOT_GGUF_MODEL_PATH')
+    for invalid in ['[]', '{', '{"gguf_model_path":"relative.gguf"}', ' ' * 5000]:
+        config.write_text(invalid, encoding='utf-8')
+        assert assistant.model_path() == ''

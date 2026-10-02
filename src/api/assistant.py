@@ -1,5 +1,6 @@
 """Session-bound, read-only explanations. Background text is request-scoped."""
 import hmac
+import json
 from importlib.util import find_spec
 import os
 from pathlib import Path
@@ -11,11 +12,27 @@ from src.application.assistant import answer_question
 from src.domain.assistant import AssistantQuestion
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["Pricing assistant"])
+MODEL_CONFIG = Path.home() / ".config" / "pricepilot" / "assistant.json"
+
+
+def model_path():
+    explicit = os.getenv("PRICEPILOT_GGUF_MODEL_PATH")
+    if explicit is not None:
+        return explicit.strip()
+    # Owner-only configuration for hosts whose process command cannot be edited.
+    # No request value, uploaded note or demo workspace can choose this path.
+    try:
+        with MODEL_CONFIG.open(encoding="utf-8") as handle:
+            config = json.loads(handle.read(4097))
+        path = config.get("gguf_model_path", "")
+        return path if isinstance(path, str) and Path(path).is_absolute() else ""
+    except (OSError, ValueError, AttributeError):
+        return ""
 
 
 def settings():
     extra = find_spec("langgraph") is not None and find_spec("langchain_core") is not None
-    path = os.getenv("PRICEPILOT_GGUF_MODEL_PATH", "").strip()
+    path = model_path()
     if extra and path and Path(path).is_file() and find_spec("llama_cpp") is not None:
         return extra, "embedded", path
     # A server-owned embedded model works publicly; an owner's laptop is not a public endpoint.

@@ -84,6 +84,13 @@ process with llama-cpp-python; public mode supports this backend. Use one web
 worker. One generation runs at a time across sessions; a busy model falls back to
 sources instead of building a queue. Context and output lengths are bounded.
 
+If the host cannot edit a running website's startup command, the owner can instead
+create `~/.config/pricepilot/assistant.json` containing
+`{"gguf_model_path":"/absolute/path/to/model.gguf"}`. This small server-owned file
+is not editable through the app. The environment variable takes precedence;
+setting it to an empty string disables this backend. Missing or invalid config
+keeps Evidence mode available.
+
 The candidate for the free 512 MiB host is SmolLM2-360M-Instruct IQ4_XS (English,
 Apache-2.0, 226,661,280 bytes). This is a very small model, not a trained pricing
 expert. Successful structured output alone would not prove business accuracy.
