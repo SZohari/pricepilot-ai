@@ -31,7 +31,7 @@ def _serve(connection, path):
     from llama_cpp import Llama
     connection.send({'phase': 'loading_model'})
     model = Llama(model_path=path, n_ctx=2048, n_threads=2, n_threads_batch=2,
-                  n_batch=256, verbose=False, chat_format="chatml", seed=41)
+                  n_batch=256, use_mmap=False, verbose=False, chat_format="chatml", seed=41)
     while True:
         try:
             messages, schema = connection.recv()
