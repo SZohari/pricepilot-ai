@@ -29,7 +29,8 @@ def _serve(connection, path):
     connection.send({'phase': 'loading_library'})
     from llama_cpp import Llama
     connection.send({'phase': 'loading_model'})
-    model = Llama(model_path=path, n_ctx=2048, n_threads=2, n_threads_batch=2,
+    # Shared single-core hosts can stall when multiple native workers contend.
+    model = Llama(model_path=path, n_ctx=2048, n_threads=1, n_threads_batch=1,
                   n_batch=256, use_mmap=False, verbose=False, chat_format="chatml", seed=41)
     while True:
         try:
@@ -39,17 +40,26 @@ def _serve(connection, path):
         try:
             model.reset()
             connection.send({'phase': 'generating'})
-            result = model.create_chat_completion(messages=messages, temperature=0, max_tokens=96)
-            if result['choices'][0]['finish_reason'] != 'stop':
+            parts, finished = [], None
+            for chunk in model.create_chat_completion(messages=messages, temperature=0,
+                                                       max_tokens=96, stream=True):
+                choice = chunk['choices'][0]
+                content = choice.get('delta', {}).get('content', '')
+                if content:
+                    if not parts:
+                        connection.send({'phase': 'writing_answer'})
+                    parts.append(content)
+                finished = choice.get('finish_reason') or finished
+            if finished != 'stop':
                 connection.send({'error': 'incomplete'})
             else:
-                connection.send({'answer': {'explanation': result['choices'][0]['message']['content'].strip(),
+                connection.send({'answer': {'explanation': ''.join(parts).strip(),
                                             'source_ids': source_ids}})
         except (ValueError, RuntimeError, KeyError, TypeError, OSError):
             connection.send({'error': 'invalid'})
 
 
-def request_generation(path, messages, schema, timeout=30):
+def request_generation(path, messages, source_ids, timeout=30):
     """Caller holds the single-model semaphore; never queue requests here."""
     global _process, _connection, _model_path
     if _process is None or not _process.is_alive() or _model_path != path:
@@ -61,7 +71,7 @@ def request_generation(path, messages, schema, timeout=30):
         _process.start()
         child.close()
     try:
-        _connection.send((messages, schema))
+        _connection.send((messages, source_ids))
         deadline, phase = time.monotonic() + timeout, 'starting_worker'
         while True:
             if not _connection.poll(max(0, deadline-time.monotonic())):
@@ -73,7 +83,7 @@ def request_generation(path, messages, schema, timeout=30):
                 break
             phase = result['phase']
         if 'answer' not in result:
-            raise ValueError('The model did not finish a structured answer')
+            raise ValueError('The model did not finish an answer')
         return result['answer']
     except (EOFError, BrokenPipeError, OSError, ValueError) as exc:
         stop_worker()
