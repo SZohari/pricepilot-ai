@@ -21,6 +21,7 @@ from src.api.v1 import get_service, require_writer, router
 from src.api.intelligence import router as intelligence_router
 from src.api.advisor import router as advisor_router
 from src.api.retail import router as retail_router
+from src.api.assistant import router as assistant_router
 from src.application.service import PricingService, demo_service, load_demo
 from src.infrastructure.repository import SQLiteRepository
 from src.infrastructure.repository import ConflictError
@@ -42,6 +43,7 @@ class Session:
     token: str
     touched: float
     busy: bool = False
+    assistant_busy: bool = False
     sources: list = field(default_factory=list)
 
 
@@ -64,7 +66,7 @@ class Sessions:
         with self.lock:
             now = time.monotonic()
             for old in list(self.items):
-                if now - self.items[old].touched > 7200 and not self.items[old].busy:
+                if now - self.items[old].touched > 7200 and not self.items[old].busy and not self.items[old].assistant_busy:
                     self.items.pop(old).service.repository.close()
             if key not in self.items:
                 if len(self.items) >= 64:
@@ -98,7 +100,7 @@ def create_app():
         if persistent:
             persistent.repository.close()
 
-    app = FastAPI(title="PricePilot workspace", version="1.7.0", lifespan=lifespan)
+    app = FastAPI(title="PricePilot workspace", version="1.8.0", lifespan=lifespan)
     hosts=["localhost", "127.0.0.1", "[::1]", "testserver"]
     hosts += [h.strip() for h in os.getenv("PRICEPILOT_ALLOWED_HOSTS", "").split(",") if h.strip()]
     if os.getenv("RENDER_EXTERNAL_HOSTNAME"): hosts.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
@@ -159,6 +161,7 @@ def create_app():
     app.include_router(intelligence_router)
     app.include_router(advisor_router)
     app.include_router(retail_router)
+    app.include_router(assistant_router)
 
     @app.get("/health")
     def health():
@@ -183,9 +186,10 @@ def create_app():
     def reserve(request):
         if persistent:
             raise HTTPException(403,"Interactive replay/collection runs in isolated demo workspaces only")
-        if request.state.session.busy:
-            raise HTTPException(409,"A collection or replay is already running")
-        request.state.session.busy=True
+        with sessions.lock:
+            if request.state.session.busy or request.state.session.assistant_busy:
+                raise HTTPException(409,"Wait for the current collection, replay or assistant answer")
+            request.state.session.busy=True
 
     def configured_sources(request):
         return collector.sources + request.state.session.sources

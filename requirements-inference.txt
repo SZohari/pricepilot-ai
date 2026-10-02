@@ -1,0 +1,4 @@
+# CPU inference is optional. Use the maintainer's official CPU wheels; never install a GPU stack on free hosting.
+-r requirements-assistant.txt
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+llama-cpp-python==0.3.36

@@ -58,6 +58,7 @@ data/processed/*.csv
 
 # Local verification and persistent workspaces
 .venv-review/
+.venv-assistant/
 .venv-deploy-check/
 data/workspaces/
 *.sqlite3

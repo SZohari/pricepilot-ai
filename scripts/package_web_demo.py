@@ -5,8 +5,8 @@ from zipfile import ZipFile, ZIP_DEFLATED
 ROOT=Path(__file__).resolve().parents[1]
 
 def package():
-    selected=["run.py","requirements-web.txt","Dockerfile","render.yaml","README.md",
-              "src/api/v1.py","src/api/intelligence.py","src/api/advisor.py","src/api/retail.py","data/scenarios/germany_wearables/demo.json",
+    selected=["run.py","scripts/verify_assistant.py","requirements-assistant.txt","requirements-inference.txt","docs/ASSISTANT.md","requirements-web.txt","Dockerfile","render.yaml","README.md",
+              "src/api/assistant.py","src/api/v1.py","src/api/intelligence.py","src/api/advisor.py","src/api/retail.py","data/scenarios/germany_wearables/demo.json",
               "config/price_sources.example.json","docs/LIVE_COLLECTION.md","docs/ONLINE_DEMO.md","docs/LAUNCH_KIT.md","docs/LINKEDIN_POST.txt","docs/PYTHONANYWHERE.md","docs/READINESS_REVIEW.md",
               "docs/MODEL_CARD.md","docs/PRODUCT_STRATEGY.md","docs/CORE_UPGRADE.md","docs/GUIDED_PRICING.md","docs/PRICING_CONSULTANT.md","docs/ECONOMIC_FOUNDATIONS.md","docs/HOMEPAGE_DESIGN.md","docs/RETAIL_DECISION_SYSTEM.md","docs/GUIDED_SETUP.md","docs/APPLICATION_NARRATIVE.md","RUN_ME_FA.md"]
     for folder in ("src/web","src/domain","src/application","src/infrastructure"):

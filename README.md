@@ -82,7 +82,21 @@ Both cases are available in the live demo. The [five-seed report](docs/demand-ev
 
 The pricing consultant uses inspectable rules and Decimal accounting. The learned model is a separate research component: observational price associations do not establish causal elasticity, and it cannot publish a price. [Model design, validation and limitations →](docs/MODEL_CARD.md)
 
+## Ask about the decision
+
+**Ask PricePilot** connects a question to the selected product, a price scenario
+and source excerpts. Try a 5% discount, raise the replacement cost, or add a short
+customer-context note. The answer keeps required sales separate from forecasts and
+shows where its evidence came from. Nothing is published or silently saved.
+
+**LangChain Core + LangGraph** connect retrieval to the pricing workflow. An
+optional server-owned GGUF or local Ollama model adds a sourced RAG explanation;
+the pricing engine still owns every monetary calculation. Without a configured
+model, **Evidence mode** remains explicit and usable, without an AI subscription.
+[Setup, deployment status and limitations →](docs/ASSISTANT.md)
+
 ## Under the hood
+
 
 **Python · FastAPI · Pydantic · NumPy · SQLite · native JavaScript modules**
 
