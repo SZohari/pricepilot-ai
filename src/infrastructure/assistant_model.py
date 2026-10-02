@@ -43,19 +43,27 @@ def embedded_generator(path):
         if not MODEL_SLOT.acquire(blocking=False):
             raise OSError("The demo model is busy; please try again shortly")
         try:
-            from llama_cpp import StoppingCriteriaList
             model = embedded_model(path)
             model.reset()
             schema = ModelExplanation.model_json_schema()
             schema["properties"]["source_ids"]["items"] = {"type": "string", "enum": [s["id"] for s in sources]}
             deadline = time.monotonic() + 35
-            result = model.create_chat_completion(messages=model_messages(question, sources),
+            stream = model.create_chat_completion(messages=model_messages(question, sources),
                 response_format={"type": "json_object", "schema": schema},
-                temperature=0, max_tokens=220,
-                stopping_criteria=StoppingCriteriaList([lambda *_: time.monotonic() >= deadline]))
-            if result["choices"][0]["finish_reason"] != "stop":
+                temperature=0, max_tokens=220, stream=True)
+            pieces, finish = [], None
+            try:
+                for chunk in stream:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("The model exceeded its generation budget")
+                    choice = chunk["choices"][0]
+                    pieces.append(choice["delta"].get("content", ""))
+                    finish = choice.get("finish_reason") or finish
+            finally:
+                stream.close()
+            if finish != "stop":
                 raise TimeoutError("The model did not complete a bounded answer")
-            return json.loads(result["choices"][0]["message"]["content"])
+            return json.loads("".join(pieces))
         except (KeyError, TypeError, RuntimeError) as exc:
             raise OSError("The demo model could not complete the answer") from exc
         finally:
