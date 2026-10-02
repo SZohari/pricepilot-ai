@@ -221,28 +221,3 @@ def test_owner_model_config_is_bounded_and_environment_has_priority(monkeypatch,
         assert assistant.model_path() == ''
 
 
-@pytest.mark.skipif(find_spec('langchain_core') is None, reason='Requires assistant extra')
-def test_embedded_stream_closes_and_releases_capacity_on_success_and_timeout(monkeypatch):
-    from src.infrastructure import assistant_model as bridge
-    closed = []
-    class Model:
-        def reset(self): pass
-        def create_chat_completion(self, *, messages, response_format, temperature, max_tokens, stream):
-            assert stream is True and max_tokens == 220
-            assert response_format['schema']['properties']['source_ids']['items']['enum'] == ['sales']
-            try:
-                yield {'choices': [{'delta': {'content': '{"explanation":"Check the recent sales evidence.","source_ids":["sales"]}'}, 'finish_reason': None}]}
-                yield {'choices': [{'delta': {}, 'finish_reason': 'stop'}]}
-            finally:
-                closed.append(True)
-    monkeypatch.setattr(bridge, 'embedded_model', lambda _: Model())
-    sources = [dict(id='sales', title='Sales', provenance='Demo', text='Sales are uncertain.')]
-    generate = bridge.embedded_generator('test-only.gguf')
-    assert generate('What sales?', sources)['source_ids'] == ['sales']
-    ticks = iter([0, 36])
-    monkeypatch.setattr(bridge.time, 'monotonic', lambda: next(ticks))
-    with pytest.raises(TimeoutError):
-        generate('What sales?', sources)
-    assert len(closed) == 2
-    assert bridge.MODEL_SLOT.acquire(blocking=False)
-    bridge.MODEL_SLOT.release()

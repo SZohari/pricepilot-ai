@@ -1,8 +1,6 @@
 """Optional LangChain bridge. Imported only when the assistant extra is installed."""
 import json
-from functools import lru_cache
 from threading import BoundedSemaphore
-import time
 from urllib.error import URLError
 from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 
@@ -30,43 +28,19 @@ def model_messages(question, sources):
         dict(question=question, sources=context), ensure_ascii=False))]
 
 
-@lru_cache(maxsize=1)
-def embedded_model(path):
-    from llama_cpp import Llama
-    return Llama(model_path=path, n_ctx=2048, n_threads=2, n_threads_batch=2,
-                 n_batch=256, verbose=False, chat_format="chatml", seed=41)
-
-
 def embedded_generator(path):
-    """A small GGUF runs inside the web process: no cloud key or visitor download."""
+    """Server-owned GGUF in an isolated worker; no cloud key or visitor download."""
     def generate(question, sources):
         if not MODEL_SLOT.acquire(blocking=False):
             raise OSError("The demo model is busy; please try again shortly")
         try:
-            model = embedded_model(path)
-            model.reset()
+            from src.infrastructure.assistant_worker import request_generation
             schema = ModelExplanation.model_json_schema()
             # The token budget bounds generation; enforce character bounds afterward.
             # Expanding maxLength into thousands of grammar branches is wasteful.
             schema["properties"]["explanation"] = {"type": "string"}
             schema["properties"]["source_ids"]["items"] = {"type": "string", "enum": [s["id"] for s in sources]}
-            deadline = time.monotonic() + 35
-            stream = model.create_chat_completion(messages=model_messages(question, sources),
-                response_format={"type": "json_object", "schema": schema},
-                temperature=0, max_tokens=220, stream=True)
-            pieces, finish = [], None
-            try:
-                for chunk in stream:
-                    if time.monotonic() >= deadline:
-                        raise TimeoutError("The model exceeded its generation budget")
-                    choice = chunk["choices"][0]
-                    pieces.append(choice["delta"].get("content", ""))
-                    finish = choice.get("finish_reason") or finish
-            finally:
-                stream.close()
-            if finish != "stop":
-                raise TimeoutError("The model did not complete a bounded answer")
-            return json.loads("".join(pieces))
+            return request_generation(path, model_messages(question, sources), schema)
         except (KeyError, TypeError, RuntimeError) as exc:
             raise OSError("The demo model could not complete the answer") from exc
         finally:

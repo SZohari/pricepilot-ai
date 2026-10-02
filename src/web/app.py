@@ -96,6 +96,8 @@ def create_app():
     @asynccontextmanager
     async def lifespan(app):
         yield
+        from src.infrastructure.assistant_worker import stop_worker
+        stop_worker()
         sessions.close()
         if persistent:
             persistent.repository.close()
