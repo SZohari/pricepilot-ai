@@ -1,6 +1,5 @@
 """Keep native inference outside the web process, with a hard wall-clock limit."""
 import atexit
-import json
 import multiprocessing
 import time
 
@@ -34,19 +33,18 @@ def _serve(connection, path):
                   n_batch=256, use_mmap=False, verbose=False, chat_format="chatml", seed=41)
     while True:
         try:
-            messages, schema = connection.recv()
+            messages, source_ids = connection.recv()
         except EOFError:
             return
         try:
             model.reset()
             connection.send({'phase': 'generating'})
-            result = model.create_chat_completion(messages=messages,
-                response_format={"type": "json_object", "schema": schema},
-                temperature=0, max_tokens=160)
+            result = model.create_chat_completion(messages=messages, temperature=0, max_tokens=96)
             if result['choices'][0]['finish_reason'] != 'stop':
                 connection.send({'error': 'incomplete'})
             else:
-                connection.send({'answer': json.loads(result['choices'][0]['message']['content'])})
+                connection.send({'answer': {'explanation': result['choices'][0]['message']['content'].strip(),
+                                            'source_ids': source_ids}})
         except (ValueError, RuntimeError, KeyError, TypeError, OSError):
             connection.send({'error': 'invalid'})
 
