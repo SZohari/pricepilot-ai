@@ -22,7 +22,7 @@ SYSTEM_PROMPT = (
 
 def model_messages(question, sources, structured=True):
     # Keep the context bounded for the small CPU model. The UI retains full excerpts.
-    context = [{"id": s["id"], "title": s["title"], "provenance": s["provenance"], "text": s["text"][:450]}
+    context = [{"id": s["id"], "title": s["title"], "provenance": s["provenance"], "text": s["text"][:450 if structured else 240]}
                for s in sources]
     if structured:
         return [dict(role="system", content=SYSTEM_PROMPT), dict(role="user", content=json.dumps(
