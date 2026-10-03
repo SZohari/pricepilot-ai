@@ -8,6 +8,8 @@ data/processed/*.tmp
 logs/
 
 .venv-review/
+.venv-web/
+.venv-assistant/
 .venv-deploy-check/
 data/workspaces/
 .env

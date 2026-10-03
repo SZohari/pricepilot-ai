@@ -86,8 +86,9 @@ worker. One generation runs at a time across sessions; a busy model falls back t
 sources instead of building a queue. A hard 40-second deadline terminates a stuck
 model process, while the pricing app stays available. Model loading is included
 in that deadline. Context and output lengths are bounded. The small embedded
-model receives previews of the top three retrieved excerpts, bounded to 240
-characters each. It selects one existing source ID using a JSON grammar. The
+model receives titles and previews of the top three retrieved excerpts, bounded
+to 96 characters each. It selects one numbered option using a JSON grammar; the
+server maps that option back to an existing source ID. The
 application displays that source's full text verbatim, with provenance and the
 label **AI-selected evidence**. This is model-assisted evidence selection, not a
 generated business explanation. A second validation requires the displayed text
@@ -101,8 +102,8 @@ is not editable through the app. The environment variable takes precedence;
 setting it to an empty string disables this backend. Missing or invalid config
 keeps Evidence mode available.
 
-The candidate for the free 512 MiB host is SmolLM2-360M-Instruct IQ4_XS (English,
-Apache-2.0, 226,661,280 bytes). This is a very small model, not a trained pricing
+The smaller candidate for the free 512 MiB host is SmolLM2-135M-Instruct Q4_K_M
+(English, Apache-2.0, 105,454,432 bytes). This is a very small model, not a trained pricing
 expert. Free-form trials produced unsupported numerical and customer claims even
 when output passed schema validation, so this backend deliberately uses evidence
 selection. The optional Ollama backend retains free-form interpretation for a
@@ -110,10 +111,10 @@ separately configured and evaluated model. Successful structured output alone
 does not prove business accuracy.
 Verify the artifact before enabling it:
 
-- Repository: `bartowski/SmolLM2-360M-Instruct-GGUF`
-- Revision: `7be6f65f1db715fe5dc5a4634c0d459b4eed42ec`
-- File: `SmolLM2-360M-Instruct-IQ4_XS.gguf`
-- SHA256: `33bf63c32304b217f8bcc5b47dcb1d325b356e21282e42c758eee25c0dd83bf5`
+- Repository: `bartowski/SmolLM2-135M-Instruct-GGUF`
+- Revision: `09816acd5d99df7be770d85ea30822623dab342c`
+- File: `SmolLM2-135M-Instruct-Q4_K_M.gguf`
+- SHA256: `2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d`
 
 Run `python -m scripts.verify_assistant` to exercise real LangGraph retrieval.
 Add `--model /absolute/path/to/model.gguf` to require real generation for the

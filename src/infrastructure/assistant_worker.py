@@ -52,11 +52,11 @@ def _serve(connection, path):
             return
         try:
             model.reset()
-            grammar = LlamaGrammar.from_json_schema(json.dumps({'type': 'string', 'enum': source_ids}), verbose=False)
+            grammar = LlamaGrammar.from_json_schema(json.dumps({'type': 'integer', 'enum': list(range(len(source_ids)))}), verbose=False)
             connection.send({'phase': 'generating'})
             parts, finished = [], None
             for chunk in model.create_chat_completion(messages=messages, temperature=0,
-                                                       max_tokens=32, grammar=grammar, stream=True):
+                                                       max_tokens=8, grammar=grammar, stream=True):
                 choice = chunk['choices'][0]
                 content = choice.get('delta', {}).get('content', '')
                 if content:
@@ -68,9 +68,9 @@ def _serve(connection, path):
                 connection.send({'error': 'incomplete', 'output': ''.join(parts), 'finish_reason': finished})
             else:
                 chosen = json.loads(''.join(parts))
-                if chosen not in source_ids:
+                if type(chosen) is not int or not 0 <= chosen < len(source_ids):
                     raise ValueError('Unknown source selection')
-                connection.send({'answer': {'selected_source': chosen}})
+                connection.send({'answer': {'selected_source': source_ids[chosen]}})
         except (ValueError, RuntimeError, KeyError, TypeError, OSError):
             connection.send({'error': 'invalid'})
 
