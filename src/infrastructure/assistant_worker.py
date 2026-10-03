@@ -38,7 +38,7 @@ def _serve(connection, path):
     connection.send({'phase': 'loading_model'})
     # Shared single-core hosts can stall when multiple native workers contend.
     model = Llama(model_path=path, n_ctx=2048, n_threads=1, n_threads_batch=1,
-                  n_batch=256, use_mmap=False, verbose=False, chat_format="chatml", seed=41)
+                  n_batch=256, use_mmap=False, verbose=False, seed=41)
     while True:
         try:
             messages, source_ids = connection.recv()
