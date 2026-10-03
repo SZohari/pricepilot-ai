@@ -1,0 +1,31 @@
+name: Real assistant model check
+
+# Finite integration test, separate from the deployed host and normal unit suite.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/assistant-model-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install the optional CPU runtime
+        run: |
+          python -m pip install -r requirements-web.txt -r requirements-assistant.txt
+          python -m pip install https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36/llama_cpp_python-0.3.36-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+      - name: Download the pinned public test model and verify its checksum
+        run: |
+          curl --fail --location --retry 2 --connect-timeout 15 --max-time 180 --output "$RUNNER_TEMP/assistant.gguf" 'https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/7be6f65f1db715fe5dc5a4634c0d459b4eed42ec/SmolLM2-360M-Instruct-IQ4_XS.gguf?download=true'
+          echo "33bf63c32304b217f8bcc5b47dcb1d325b356e21282e42c758eee25c0dd83bf5  $RUNNER_TEMP/assistant.gguf" | sha256sum --check --strict
+      - name: Require real LangGraph, retrieval and model responses
+        run: python -m scripts.verify_assistant --model "$RUNNER_TEMP/assistant.gguf"
