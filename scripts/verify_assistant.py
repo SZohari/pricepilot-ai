@@ -20,6 +20,11 @@ def report(question, result, started, require_generation):
         'seconds': round(time.monotonic()-started, 2)}, ensure_ascii=False), flush=True)
     if require_generation:
         assert result['mode'] == 'rag', 'Real generation failed; keep Evidence mode available'
+        if result['explanation'].get('style') == 'selected_excerpt':
+            expected = 'sales' if question == QUESTIONS[0] else 'note-1-1'
+            assert result['explanation']['source_ids'] == [expected], 'The model selected the wrong evidence'
+            selected = next(s for s in result['sources'] if s['id'] == expected)
+            assert result['explanation']['explanation'] == selected['text']
 
 
 def verify_public(url, require_generation):

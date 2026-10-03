@@ -134,6 +134,7 @@ def test_missing_model_falls_back_honestly(client):
     {'explanation':'Guaranteed profit rises to EUR 999.', 'source_ids':['sales']},
     {'explanation':'This is not supported by an actual source.', 'source_ids':['invented-source']},
     {'explanation':'short', 'source_ids':[]},
+    {'explanation':'Profit is guaranteed at EUR 999.', 'source_ids':['sales'], 'style':'selected_excerpt'},
 ])
 def test_invalid_model_answer_cannot_replace_verified_engine_result(response):
     service=demo_service()
@@ -156,6 +157,23 @@ def test_model_timeout_keeps_the_calculation_available():
         assert answer['mode']=='evidence' and answer['fallback']
         assert not answer['calculation']['forecast']
     finally: service.repository.close()
+
+
+def test_ai_selection_is_verbatim_and_preserves_unverified_note_provenance():
+    service = demo_service()
+    try:
+        note = 'Customers ask about phone compatibility. We have not counted how often this prevents a purchase.'
+        payload = AssistantQuestion(question='What do we know about phone compatibility?', mode='rag',
+            analysis={'product_id':'DE-WEAR-001','expected_version':1},
+            documents=[{'title':'Compatibility concerns','text':note}])
+        result = answer_question(payload, lambda p:analysis(p,service), lambda q,s:dict(
+            explanation=s[0]['text'], source_ids=[s[0]['id']], style='selected_excerpt'))
+        assert result['mode'] == 'rag'
+        assert result['explanation']['explanation'] == note
+        assert result['explanation']['source_ids'] == ['note-1-1']
+        assert result['sources'][0]['provenance'].startswith('Unverified')
+    finally:
+        service.repository.close()
 
 
 def test_customer_observation_can_pause_a_price_test(client):

@@ -47,7 +47,8 @@ def capabilities():
                 workflow="langgraph" if extra else "python", notes_persisted=False,
                 model_location="server_process" if backend == "embedded" else "server_loopback" if backend else None,
                 model_name=Path(model).stem if backend == "embedded" else model if backend else None,
-                notice="AI explains retrieved evidence. The pricing engine supplies the numbers. Source-only answers stay available.")
+                answer_style='selected_excerpt' if backend == 'embedded' else 'interpretation',
+                notice="The small server model selects an exact evidence excerpt. The pricing engine supplies the scenario and numbers. Source-only answers stay available.")
 
 
 @router.post("/ask")

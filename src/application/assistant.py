@@ -143,8 +143,13 @@ def compose(state, generator=None):
         allowed = {d["id"] for d in state["selected"]}
         if not set(result.source_ids) <= allowed:
             raise ValueError("Unknown citation")
-        # Numbers and price instructions are deliberately kept in the engine panel.
-        if re.search(r"\d|€|\bEUR\b", result.explanation, re.I):
+        # Extractive answers must be an exact, single-source quotation. Never let
+        # a model label fabricated text as a source excerpt to evade validation.
+        if result.style == 'selected_excerpt':
+            if len(result.source_ids) != 1 or not any(
+                    d['id'] == result.source_ids[0] and d['text'] == result.explanation for d in state['selected']):
+                raise ValueError('The selected excerpt does not match its source')
+        elif re.search(r"\d|€|\bEUR\b", result.explanation, re.I):
             raise ValueError("The language model must leave quantities to the engine")
         return {"generated": result.model_dump(), "fallback": None, "generation_seconds": round(time.monotonic()-started, 2)}
     except (ValueError, TimeoutError, OSError) as exc:

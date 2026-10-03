@@ -31,6 +31,14 @@ test('notes and model prose cannot inject HTML; absence of evidence and forecast
   assert.ok(!answerHTML(r).includes('<svg'));
 });
 
+test('AI-selected excerpts are labelled as quotations, with their provenance',()=>{
+  const r=response();r.mode='rag';r.sources[0].provenance='Unverified background note';
+  r.explanation={explanation:'Test source',source_ids:['costs'],style:'selected_excerpt'};
+  const html=answerHTML(r);
+  assert.match(html,/AI-SELECTED EVIDENCE/);assert.match(html,/Unverified background note/);
+  assert.match(html,/did not write it/);assert.ok(!html.includes('AI interpretation'));
+});
+
 // Event fixture checks input/state races, not browser layout or accessibility rendering.
 async function fixture(){
   const S=state(),events=new Map(),elements=new Map(),requests=[];let html='',handler=null;

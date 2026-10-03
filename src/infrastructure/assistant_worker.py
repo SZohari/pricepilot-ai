@@ -1,5 +1,6 @@
 """Keep native inference outside the web process, with a hard wall-clock limit."""
 import atexit
+import json
 import multiprocessing
 import time
 
@@ -34,7 +35,7 @@ def stop_worker():
 def _serve(connection, path):
     # Imported only in the child. A native crash cannot take down FastAPI.
     connection.send({'phase': 'loading_library'})
-    from llama_cpp import Llama
+    from llama_cpp import Llama, LlamaGrammar
     connection.send({'phase': 'loading_model'})
     # Shared single-core hosts can stall when multiple native workers contend.
     model = Llama(model_path=path, n_ctx=2048, n_threads=1, n_threads_batch=1,
@@ -46,10 +47,11 @@ def _serve(connection, path):
             return
         try:
             model.reset()
+            grammar = LlamaGrammar.from_json_schema(json.dumps({'type': 'string', 'enum': source_ids}), verbose=False)
             connection.send({'phase': 'generating'})
             parts, finished = [], None
             for chunk in model.create_chat_completion(messages=messages, temperature=0,
-                                                       max_tokens=96, stream=True):
+                                                       max_tokens=32, grammar=grammar, stream=True):
                 choice = chunk['choices'][0]
                 content = choice.get('delta', {}).get('content', '')
                 if content:
@@ -60,8 +62,10 @@ def _serve(connection, path):
             if finished != 'stop':
                 connection.send({'error': 'incomplete', 'output': ''.join(parts), 'finish_reason': finished})
             else:
-                connection.send({'answer': {'explanation': ''.join(parts).strip(),
-                                            'source_ids': source_ids}})
+                chosen = json.loads(''.join(parts))
+                if chosen not in source_ids:
+                    raise ValueError('Unknown source selection')
+                connection.send({'answer': {'selected_source': chosen}})
         except (ValueError, RuntimeError, KeyError, TypeError, OSError):
             connection.send({'error': 'invalid'})
 

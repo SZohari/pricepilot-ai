@@ -29,3 +29,4 @@ class ModelExplanation(Contract):
     """The model can explain evidence; it cannot supply or change price decisions."""
     explanation: str = Field(min_length=10, max_length=1800)
     source_ids: list[str] = Field(min_length=1, max_length=6)
+    style: Literal['interpretation', 'selected_excerpt'] = 'interpretation'
