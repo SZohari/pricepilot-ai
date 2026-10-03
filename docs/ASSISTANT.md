@@ -14,7 +14,8 @@ again. These are conditions for a useful test, not forecasts of customer behavio
 | Mode | What runs | What it does not claim |
 |---|---|---|
 | Evidence | Decimal pricing engine plus BM25 text retrieval | No generative model, semantic search or free-form reasoning |
-| Optional RAG | LangChain documents/retriever + LangGraph workflow + a server-owned GGUF or Ollama model | No guaranteed factual accuracy, trained pricing model or autonomous publication |
+| Bounded RAG (GGUF) | LangChain retrieval + LangGraph workflow + a server model selecting an exact source passage | No free-form AI advice or claim that an owner's note is verified |
+| Optional RAG (Ollama) | The same workflow with a separately configured local model writing a sourced interpretation | No guaranteed factual accuracy, trained pricing model or autonomous publication |
 
 Without a configured model, the app defaults to Evidence mode. A configured model
 enables AI mode, while source-only answers remain selectable. Installing the
@@ -33,9 +34,9 @@ Request-scoped source documents + optional owner text
                     ↓
 BM25 retrieval of up to five relevant excerpts
                     ↓
-Evidence excerpts OR local model explanation
+Evidence excerpts OR model-selected passage / optional local interpretation
                     ↓
-Validated citations + separately displayed engine result
+Exact-source / citation validation + separately displayed engine result
 ```
 
 The optional LangGraph path has four bounded nodes: calculate, retrieve, explain,
@@ -82,12 +83,16 @@ Install `requirements-inference.txt` and set `PRICEPILOT_GGUF_MODEL_PATH` to an
 already downloaded GGUF file outside the repository. The model runs in a separate
 reusable subprocess with llama-cpp-python; public mode supports this backend. Use one web
 worker. One generation runs at a time across sessions; a busy model falls back to
-sources instead of building a queue. A hard 30-second deadline terminates a stuck
+sources instead of building a queue. A hard 40-second deadline terminates a stuck
 model process, while the pricing app stays available. Model loading is included
 in that deadline. Context and output lengths are bounded. The small embedded
-model receives at most three retrieved excerpts and writes one short sentence.
-The app attaches those context IDs itself; they are context references, not proof
-that every generated claim is supported. Numerical claims still cause fallback.
+model receives previews of the top three retrieved excerpts, bounded to 240
+characters each. It selects one existing source ID using a JSON grammar. The
+application displays that source's full text verbatim, with provenance and the
+label **AI-selected evidence**. This is model-assisted evidence selection, not a
+generated business explanation. A second validation requires the displayed text
+to match that single source exactly. An owner's note stays unverified even when
+the model selects it. The pricing engine's separate panel supplies the decision.
 
 If the host cannot edit a running website's startup command, the owner can instead
 create `~/.config/pricepilot/assistant.json` containing
@@ -98,7 +103,11 @@ keeps Evidence mode available.
 
 The candidate for the free 512 MiB host is SmolLM2-360M-Instruct IQ4_XS (English,
 Apache-2.0, 226,661,280 bytes). This is a very small model, not a trained pricing
-expert. Successful structured output alone would not prove business accuracy.
+expert. Free-form trials produced unsupported numerical and customer claims even
+when output passed schema validation, so this backend deliberately uses evidence
+selection. The optional Ollama backend retains free-form interpretation for a
+separately configured and evaluated model. Successful structured output alone
+does not prove business accuracy.
 Verify the artifact before enabling it:
 
 - Repository: `bartowski/SmolLM2-360M-Instruct-GGUF`
@@ -118,7 +127,9 @@ extra installed, use a disposable demo session:
 python -m scripts.verify_assistant --url https://sepas.eu.pythonanywhere.com --require-generation
 ```
 
-This checks both questions, requires actual generation, and fails on fallback.
+This checks both questions, requires the actual model, and fails on fallback or
+the wrong selected source for these fixtures. Exact quotations must match their
+source, including the unknown purchase impact in the compatibility note.
 It prints no session token and makes no saved product edits. Omit
 `--require-generation` to verify only the source and calculation path.
 
@@ -131,8 +142,9 @@ No weight file, API key or merchant data is committed to Git.
 - Keyword retrieval can miss paraphrases, negation and multilingual nuance. The
   supported UI and model prompt are English; a few Persian keyword aliases do not
   amount to evaluated multilingual support. No match is shown explicitly.
-- A valid citation ID does not prove that a model's claim is entailed by its source.
-  Generated interpretation stays labelled and must be checked against excerpts.
+- Exact selection prevents invented wording, but relevance can still be wrong
+  and a source itself can be incomplete or unverified. A citation ID on optional
+  free-form interpretation does not prove entailment. Both modes remain labelled.
 - The assistant does not infer scenario values from a question. Use the explicit
   controls. Notes cannot silently overwrite accounting inputs.
 - A saved-product version conflict is rejected. The UI clears an answer after any

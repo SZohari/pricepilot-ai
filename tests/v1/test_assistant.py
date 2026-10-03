@@ -176,6 +176,22 @@ def test_ai_selection_is_verbatim_and_preserves_unverified_note_provenance():
         service.repository.close()
 
 
+@pytest.mark.parametrize('price,meaning', [
+    ('426.55', 'More sales are needed'), ('449.00', 'Contribution per sale is unchanged'),
+    ('470.00', 'Fewer sales may preserve'), ('1.00', 'More sales cannot recover')])
+def test_sales_evidence_explains_the_actual_scenario_direction(price, meaning):
+    service = demo_service()
+    try:
+        payload = AssistantQuestion(question='Sales contribution discount',
+            analysis={'product_id':'DE-WEAR-001','expected_version':1,'candidate_price':price})
+        result = answer_question(payload, lambda p:analysis(p,service))
+        sales = next(s for s in result['sources'] if s['id'] == 'sales')
+        assert meaning in sales['text']
+        assert 'not a demand forecast' in sales['text']
+    finally:
+        service.repository.close()
+
+
 def test_customer_observation_can_pause_a_price_test(client):
     headers,_,payload=setup(client)
     payload['analysis'].update(candidate_price='426.55',knowledge_notes=[dict(topic='trust',statement='Do customers trust our warranty?',basis='question',checked_on='2026-09-26',resolve_first=True)])

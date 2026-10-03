@@ -20,5 +20,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m pip install httpx==0.28.1
+      - name: Check deployed retrieval and calculations separately
+        run: python -m scripts.verify_assistant --url https://sepas.eu.pythonanywhere.com
       - name: Require real answers for both fictional-shop questions
         run: python -m scripts.verify_assistant --url https://sepas.eu.pythonanywhere.com --require-generation

@@ -89,9 +89,11 @@ and source excerpts. Try a 5% discount, raise the replacement cost, or add a sho
 customer-context note. The answer keeps required sales separate from forecasts and
 shows where its evidence came from. Nothing is published or silently saved.
 
-**LangChain Core + LangGraph** connect retrieval to the pricing workflow. An
-optional server-owned GGUF or local Ollama model adds a sourced RAG explanation;
-the pricing engine still owns every monetary calculation. Without a configured
+**LangChain Core + LangGraph** connect retrieval to the pricing workflow. The
+small server-owned GGUF model selects a relevant source passage; the app quotes
+it exactly and keeps its provenance visible. It cannot improvise financial advice.
+A separately configured local Ollama model can provide a free-form interpretation.
+The pricing engine still owns every monetary calculation. Without a configured
 model, **Evidence mode** remains explicit and usable, without an AI subscription.
 The public assistant and retrieval workflow are deployed; real-model generation
 is still under verification and should not yet be presented as a working AI demo.
