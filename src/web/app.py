@@ -9,7 +9,7 @@ import mimetypes
 import os
 from pathlib import Path
 import secrets
-from threading import RLock
+from threading import RLock, Thread
 import time
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -96,7 +96,8 @@ def create_app():
     @asynccontextmanager
     async def lifespan(app):
         from src.api.assistant import warm_assistant
-        await asyncio.to_thread(warm_assistant)
+        # Model preparation must not hold the core shop or health check offline.
+        Thread(target=warm_assistant, name='assistant-startup', daemon=True).start()
         yield
         from src.infrastructure.assistant_worker import stop_worker
         stop_worker()

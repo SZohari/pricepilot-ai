@@ -95,8 +95,10 @@ it exactly and keeps its provenance visible. It cannot improvise financial advic
 A separately configured local Ollama model can provide a free-form interpretation.
 The pricing engine still owns every monetary calculation. Without a configured
 model, **Evidence mode** remains explicit and usable, without an AI subscription.
-The public assistant and retrieval workflow are deployed; real-model generation
-is still under verification and should not yet be presented as a working AI demo.
+The public assistant has passed real-model checks for the discount scenario and
+customer-context retrieval. The free CPU demo took about 16–28 seconds per answer
+with the model loaded; source-only mode is faster. AI selects evidence, while
+calculations and price approval remain separate.
 [Setup, deployment status and limitations →](docs/ASSISTANT.md)
 
 ## Under the hood

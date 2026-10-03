@@ -13,6 +13,7 @@ from src.domain.assistant import AssistantQuestion
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["Pricing assistant"])
 MODEL_CONFIG = Path.home() / ".config" / "pricepilot" / "assistant.json"
+_warm_state = 'not_requested'
 
 
 def owner_config():
@@ -46,10 +47,13 @@ def settings():
 
 def warm_assistant():
     """Opt-in startup preparation, using no customer question or shop data."""
+    global _warm_state
     if owner_config().get('warm_on_startup') is not True:
         return
+    _warm_state = 'preparing'
     extra, backend, path = settings()
     if not extra or backend != 'embedded':
+        _warm_state = 'unavailable'
         return
     # Load optional imports before accepting requests on a slow shared host.
     try:
@@ -57,12 +61,16 @@ def warm_assistant():
         from src.infrastructure.assistant_model import MODEL_SLOT
         from src.infrastructure.assistant_worker import request_generation
     except ImportError:
+        _warm_state = 'unavailable'
         return
     if not MODEL_SLOT.acquire(blocking=False):
+        _warm_state = 'busy'
         return
     try:
         request_generation(path, [{'role':'user', 'content':'Choose option 0.'}], ['startup'])
+        _warm_state = 'ready'
     except (OSError, ValueError):
+        _warm_state = 'unavailable'
         import logging
         logging.getLogger(__name__).warning('Assistant warm-up failed; source mode remains available')
     finally:
@@ -72,7 +80,9 @@ def warm_assistant():
 @router.get("/capabilities")
 def capabilities():
     extra, backend, model = settings()
-    return dict(default_mode="rag" if backend else "evidence", rag_configured=bool(backend),
+    preparing = owner_config().get('warm_on_startup') is True and _warm_state in ('not_requested', 'preparing')
+    return dict(default_mode="rag" if backend and not preparing else "evidence", rag_configured=bool(backend),
+                preparing=preparing,
                 workflow="langgraph" if extra else "python", notes_persisted=False,
                 model_location="server_process" if backend == "embedded" else "server_loopback" if backend else None,
                 model_name=Path(model).stem if backend == "embedded" else model if backend else None,

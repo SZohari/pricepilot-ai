@@ -104,9 +104,9 @@ keeps Evidence mode available.
 
 On a slow host, add `"warm_on_startup": true` to the owner configuration. Startup
 then loads the optional graph libraries and primes the model with a short neutral
-selection before accepting requests. No product, question or visitor note is used.
-This trades a longer server restart for avoiding model loading inside the first
-visitor's question. Warm-up failure is caught; the main app still starts. The
+selection in a background thread. No product, question or visitor note is used.
+The shop and health check stay available while AI prepares; the assistant starts
+in source mode and displays a preparation notice. Warm-up failure is caught. The
 small CPU model is not instant: use Evidence mode for the quickest calculations.
 
 The smaller candidate for the free 512 MiB host is SmolLM2-135M-Instruct Q4_K_M
@@ -169,36 +169,32 @@ Upstream references: [LangGraph](https://docs.langchain.com/oss/python/langgraph
 [LangChain Core](https://pypi.org/project/langchain-core/),
 [Ollama chat API](https://docs.ollama.com/api/chat).
 
-### Verification status, 2026-10-02
+### Verification status, 2026-10-03
 
-The full Python suite passed 572 tests, with two skips (the optional legacy
-Streamlit/PyArrow UI and LangGraph parity test). The 85 JavaScript tests passed.
-After the inference changes, the focused suite passed 19 tests with the graph
-test still skipped locally. CI installs the graph extra separately; the deployed
-`9bdbcee` build's [quality checks passed](https://github.com/SZohari/pricepilot-ai/actions/runs/37026329384).
-These are software checks, not a model-quality evaluation.
+**The real model passed both public API checks**, using LangChain retrieval and
+LangGraph with SmolLM2-135M Q4_K_M. The discount question selected the sales
+source; the compatibility question selected the supplied note, including its
+unknown effect on purchases. Both returned `mode: rag`, `style: selected_excerpt`
+and no fallback. The warmed server took 27.5 and 16.0 seconds respectively.
+These observations are not a latency guarantee or a broad relevance benchmark.
 
-The public site serves version 1.8.0. LangChain Core 1.6.6, LangGraph 1.2.12 and
-llama-cpp-python 0.3.36 are installed on PythonAnywhere. The owner downloaded the
-model; it was uploaded, assembled and SHA256-verified on the host. The model CDN
-restriction is no longer the installation blocker. Real LangGraph retrieval was
-exercised on the host and through the public API.
+The same model passed the real-model check on Windows and Linux. The compact
+prompt took about 1.5 and 0.5 seconds locally. The focused assistant and web suite
+passed 35 tests, including actual LangGraph parity; all six assistant UI tests
+passed. Normal CI also runs the full Python and JavaScript suites. These software
+checks do not turn an unverified owner note into a fact.
 
-Public browser checks exercised the discount scenario and an unverified customer
-note. The discount changed the candidate price from EUR 449 to EUR 426.55 and
-contribution from EUR 125.26 to EUR 106.78. The engine required ten sales against
-the fractional 8.4-unit baseline in the fourteen-day scenario. These figures are
-from the fictional shop, not measured merchant results.
+The model file is SHA256-verified on the host. LangChain Core 1.6.6, LangGraph
+1.2.12 and llama-cpp-python 0.3.36 are installed there and in the prepared local
+`.venv-web` environment. No API key or paid inference service is configured.
 
-**Generative mode is not yet verified as working.** The last completed model
-requests fell back after roughly 31 seconds. An earlier in-process model stalled
-a website reload; the site was restored and inference moved to a killable child
-process. The subsequent short-prose build (`9bdbcee`) was deployed, but a network
-connection failure interrupted its real-model retest. The single-thread inference
-adjustment (`515aeea`) is in GitHub and still needs deployment and a successful
-live check. A configured model is not proof that it can answer successfully.
+The fictional discount example changes EUR 449 to EUR 426.55 and contribution
+from EUR 125.26 to EUR 106.78. The engine requires ten sales against a fractional
+8.4-sale baseline over fourteen days. These are simulated shop calculations, not
+measured merchant results or model-generated forecasts.
 
-Before treating AI mode as ready, finish the pending deployment, run both real
-generation checks above without fallback, review the claims against the excerpts,
-and check the public browser again. Do not present Evidence-mode answers as LLM
-output. No API key or paid inference service is configured.
+Cold loading previously exhausted the request budget on the shared host. Version
+1.8.1 supports owner-enabled startup preparation and revalidates browser modules
+so the UI describes the deployed API accurately. The embedded backend is an
+evidence selector, not a free-form pricing chatbot. Source-only mode remains
+available when the model is busy, times out or is not configured.
