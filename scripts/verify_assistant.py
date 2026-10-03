@@ -39,6 +39,7 @@ def verify_public(url, require_generation):
         print(json.dumps({'health': get('/health'), 'capabilities': get('/api/v1/assistant/capabilities')}), flush=True)
         token = get('/api/workspace')['csrf_token']
         entry = next(p for p in get('/api/v1/products') if p['product']['product_id'] == 'DE-WEAR-001')
+        failures = []
         for question in QUESTIONS:
             started = time.monotonic()
             response = client.post('/api/v1/assistant/ask', headers={'X-Workspace-Token': token}, json={
@@ -46,7 +47,11 @@ def verify_public(url, require_generation):
                 'analysis': {'product_id': entry['product']['product_id'], 'expected_version': entry['version'],
                              'candidate_price': '426.55'}})
             response.raise_for_status()
-            report(question, response.json(), started, require_generation)
+            try:
+                report(question, response.json(), started, require_generation)
+            except AssertionError as exc:
+                failures.append(str(exc))
+        assert not failures, '; '.join(failures)
 
 
 def main():

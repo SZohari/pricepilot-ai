@@ -2,6 +2,7 @@
 import atexit
 import json
 import multiprocessing
+import os
 import time
 
 _process = None
@@ -34,6 +35,10 @@ def stop_worker():
 
 def _serve(connection, path):
     # Imported only in the child. A native crash cannot take down FastAPI.
+    # NumPy/BLAS may create their own pool independently of llama's n_threads.
+    # Bound those libraries before importing them on a shared single-core host.
+    for name in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'BLIS_NUM_THREADS', 'NUMEXPR_NUM_THREADS'):
+        os.environ[name] = '1'
     connection.send({'phase': 'loading_library'})
     from llama_cpp import Llama, LlamaGrammar
     connection.send({'phase': 'loading_model'})
