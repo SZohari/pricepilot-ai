@@ -72,6 +72,7 @@ export async function bindAssistant(S,main,api,toast){
   }
   function invalidate(){
     ++generation;
+    status('Inputs changed. Ask again to check this scenario.');
     const output=root.querySelector('#assistant-output');
     output.innerHTML='<div class="assistant-placeholder"><h2>Ready for a fresh answer.</h2><p>Your inputs changed. Ask again to check this scenario.</p></div>';
   }

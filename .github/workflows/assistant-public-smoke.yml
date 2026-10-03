@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pricepilot-public-assistant-check
+  cancel-in-progress: false
+
 jobs:
   verify-live-generation:
     runs-on: ubuntu-latest

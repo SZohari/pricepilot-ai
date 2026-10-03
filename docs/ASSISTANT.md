@@ -180,7 +180,7 @@ These observations are not a latency guarantee or a broad relevance benchmark.
 
 The same model passed the real-model check on Windows and Linux. The compact
 prompt took about 1.5 and 0.5 seconds locally. The focused assistant and web suite
-passed 35 tests, including actual LangGraph parity; all six assistant UI tests
+passed 36 tests, including actual LangGraph parity and nonblocking startup; all six assistant UI tests
 passed. Normal CI also runs the full Python and JavaScript suites. These software
 checks do not turn an unverified owner note into a fact.
 

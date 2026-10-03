@@ -63,7 +63,7 @@ test('the discount shortcut sends the changed scenario and does not save a produ
   const f=await fixture();f.preset(1);await f.ask();
   assert.equal(f.requests.length,1);assert.equal(f.requests[0].analysis.candidate_price,'190.00');
   assert.match(f.output,/Review this price/);
-  f.input('candidate','180');assert.ok(!f.output.includes('Review this price'));await f.ask();
+  f.input('candidate','180');assert.ok(!f.output.includes('Review this price'));assert.match(f.status,/Inputs changed/);await f.ask();
   assert.equal(f.requests.at(-1).analysis.candidate_price,'180.00');
 });
 
