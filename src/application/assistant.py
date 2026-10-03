@@ -5,6 +5,7 @@ LangGraph extra runs the same steps and a server-owned retrieval-augmented answe
 No checkpoints, cross-user index, conversation logging or mutation tools.
 """
 from collections import Counter
+from decimal import Decimal
 from hashlib import sha256
 import json
 from math import log
@@ -68,7 +69,17 @@ def sources_for(item, background):
         f"VAT rate: {c['vat_rate']}; fee rate: {c['fee_rate']}, charged on {c['fee_basis']} revenue. "
         "Contribution is not net profit: fixed overhead is excluded.")
     requirement = e["minimum_units_with_volume_guardrail"]
+    current, candidate = Decimal(insight['current_per_sale']), Decimal(insight['considered_per_sale'])
+    if candidate <= 0:
+        sales_logic = "The candidate leaves no positive contribution per sale. More sales cannot recover a positive contribution target at this price."
+    elif candidate < current:
+        sales_logic = "The candidate leaves less contribution per sale. More sales are needed to preserve total contribution; a discount does not guarantee those extra sales."
+    elif candidate > current:
+        sales_logic = "The candidate leaves more contribution per sale. Fewer sales may preserve total contribution, but the separate sales-loss limit still applies."
+    else:
+        sales_logic = "Contribution per sale is unchanged. Preserving total contribution needs the same sales pace, subject to stock and the sales-loss limit."
     add("sales", "Sales requirement, stock and uncertainty",
+        f"{sales_logic} This is a conditional requirement, not a demand forecast. "
         f"The recent baseline is {c['baseline_units']} sales over {c['baseline_days']} days. "
         f"At the same pace, that is {e['baseline_units_over_test']} over this {c['test_days']}-day scenario. "
         f"Required sales to preserve contribution and the sales-loss limit: "

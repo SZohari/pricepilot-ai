@@ -79,13 +79,18 @@ def main():
                     except ModelOutputError as exc:
                         print(json.dumps({'demo_raw_output': exc.output, 'finish_reason': exc.reason}), flush=True)
                         raise
+        failures = []
         for question in QUESTIONS:
             request = AssistantQuestion(question=question, mode='rag' if args.model else 'evidence',
                 analysis={'product_id': 'DE-WEAR-001', 'expected_version': 1, 'candidate_price': '426.55'},
                 documents=NOTES)
             start = time.monotonic()
             result = answer_question(request, lambda p: analysis(p, service), generator, use_langgraph=True)
-            report(question, result, start, bool(args.model))
+            try:
+                report(question, result, start, bool(args.model))
+            except AssertionError as exc:
+                failures.append(str(exc))
+        assert not failures, '; '.join(failures)
     finally:
         service.repository.close()
 
