@@ -44,7 +44,7 @@ def _serve(connection, path):
     connection.send({'phase': 'loading_model'})
     # Shared single-core hosts can stall when multiple native workers contend.
     model = Llama(model_path=path, n_ctx=2048, n_threads=1, n_threads_batch=1,
-                  n_batch=256, use_mmap=False, verbose=False, seed=41)
+                  n_batch=256, use_mmap=True, verbose=False, seed=41)
     while True:
         try:
             messages, source_ids = connection.recv()
@@ -75,7 +75,7 @@ def _serve(connection, path):
             connection.send({'error': 'invalid'})
 
 
-def request_generation(path, messages, source_ids, timeout=30):
+def request_generation(path, messages, source_ids, timeout=40):
     """Caller holds the single-model semaphore; never queue requests here."""
     global _process, _connection, _model_path
     if _process is None or not _process.is_alive() or _model_path != path:
