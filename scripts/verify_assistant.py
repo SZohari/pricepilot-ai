@@ -16,6 +16,7 @@ def report(question, result, started, require_generation):
     print(json.dumps({'question': question, 'mode': result['mode'], 'explanation': result['explanation'],
         'fallback': result['fallback'], 'fallback_code': result.get('fallback_code'),
         'timeout_phase': result.get('timeout_phase'), 'generation_seconds': result.get('generation_seconds'),
+        'phase_reached_seconds': result.get('phase_reached_seconds'),
         'sources': [s['id'] for s in result['sources']],
         'seconds': round(time.monotonic()-started, 2)}, ensure_ascii=False), flush=True)
     if require_generation:

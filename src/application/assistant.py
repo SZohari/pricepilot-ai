@@ -155,6 +155,7 @@ def compose(state, generator=None):
     except (ValueError, TimeoutError, OSError) as exc:
         code = "timeout" if isinstance(exc, TimeoutError) else "invalid_output" if isinstance(exc, ValueError) else "unavailable"
         return {"generated": None, "fallback_code": code, "timeout_phase": getattr(exc, "phase", None), "generation_seconds": round(time.monotonic()-started, 2),
+            "phase_reached_seconds": getattr(exc, "phase_reached_seconds", None),
             "fallback": "The model took too long. Showing calculations and sources." if code == "timeout" else
             "The local model did not return a usable sourced answer. Showing verified calculations and source excerpts."}
 
@@ -168,6 +169,7 @@ def package_answer(state):
         mode="rag" if state["generated"] else "evidence", explanation=state["generated"], fallback=state["fallback"],
         fallback_code=state.get("fallback_code"), generation_seconds=state.get("generation_seconds"),
         timeout_phase=state.get("timeout_phase"),
+        phase_reached_seconds=state.get("phase_reached_seconds"),
         matched=bool(state["selected"]), sources=state["selected"],
         decision=dict(title=r["title"], why=r["why"], next_step=r["next_step"], action=r["action"], can_start_test=r["can_start_test"]),
         calculation=dict(current_price=i["current_price"], candidate_price=i["considered_price"],
@@ -191,6 +193,7 @@ class AssistantState(TypedDict, total=False):
     fallback_code: str | None
     generation_seconds: float
     timeout_phase: str | None
+    phase_reached_seconds: dict | None
     answer: dict
     workflow_engine: str
 

@@ -88,16 +88,20 @@ def request_generation(path, messages, source_ids, timeout=30):
         child.close()
     try:
         _connection.send((messages, source_ids))
-        deadline, phase = time.monotonic() + timeout, 'starting_worker'
+        started = time.monotonic()
+        deadline, phase = started + timeout, 'starting_worker'
+        reached = {}
         while True:
             if not _connection.poll(max(0, deadline-time.monotonic())):
                 error = TimeoutError('The model exceeded its response budget')
                 error.phase = phase
+                error.phase_reached_seconds = reached
                 raise error
             result = _connection.recv()
             if 'phase' not in result:
                 break
             phase = result['phase']
+            reached[phase] = round(time.monotonic() - started, 2)
         if 'answer' not in result:
             raise ModelOutputError(result.get('finish_reason') or result.get('error'), result.get('output', ''))
         return result['answer']
