@@ -25,6 +25,26 @@ def test_static_and_security(web):
     assert web.get("/static/app.css").status_code == 200
     assert web.get("/",headers={"host":"evil.example"}).status_code == 400
 
+
+def test_optional_model_preparation_does_not_hold_the_shop_offline(monkeypatch):
+    from threading import Event
+    import time
+    from src.api import assistant
+    started, release = Event(), Event()
+    def slow_model():
+        started.set()
+        release.wait(5)
+    monkeypatch.setattr(assistant, 'warm_assistant', slow_model)
+    began = time.monotonic()
+    try:
+        with TestClient(create_app()) as client:
+            assert time.monotonic()-began < 2
+            assert started.wait(1)
+            assert client.get('/health').status_code == 200
+            assert client.get('/api/workspace').status_code == 200
+    finally:
+        release.set()
+
 def test_catalog_provenance_and_data_integrity(web):
     info=web.get("/api/workspace").json()
     assert info["can_write"] and info["mode"]=="demo"
