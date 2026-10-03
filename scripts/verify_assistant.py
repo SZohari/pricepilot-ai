@@ -49,10 +49,11 @@ def main():
     parser.add_argument('--model', help='Path to an already downloaded GGUF')
     parser.add_argument('--url', help='Public demo base URL; does not change saved product data')
     parser.add_argument('--require-generation', action='store_true', help='Fail if the public model falls back')
+    parser.add_argument('--inspect-demo-output', action='store_true', help='Inspect raw output only for the bundled fictional fixtures')
     args = parser.parse_args()
     if args.url:
-        if args.model:
-            parser.error('--url and --model are separate verification targets')
+        if args.model or args.inspect_demo_output:
+            parser.error('--url cannot inspect local model output')
         verify_public(args.url, args.require_generation)
         return
     if args.require_generation and not args.model:
@@ -67,6 +68,17 @@ def main():
         if args.model:
             from src.infrastructure.assistant_model import embedded_generator
             generator = embedded_generator(args.model)
+            if args.inspect_demo_output:
+                from src.infrastructure.assistant_worker import ModelOutputError
+                raw_generator = generator
+                def generator(question, sources):
+                    try:
+                        result = raw_generator(question, sources)
+                        print(json.dumps({'demo_raw_output': result}), flush=True)
+                        return result
+                    except ModelOutputError as exc:
+                        print(json.dumps({'demo_raw_output': exc.output, 'finish_reason': exc.reason}), flush=True)
+                        raise
         for question in QUESTIONS:
             request = AssistantQuestion(question=question, mode='rag' if args.model else 'evidence',
                 analysis={'product_id': 'DE-WEAR-001', 'expected_version': 1, 'candidate_price': '426.55'},

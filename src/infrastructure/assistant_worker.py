@@ -8,6 +8,13 @@ _connection = None
 _model_path = None
 
 
+class ModelOutputError(ValueError):
+    """In-memory diagnostic for the fixed-fixture CLI; never exposed by the API."""
+    def __init__(self, reason, output=''):
+        super().__init__('The model did not finish an answer')
+        self.reason, self.output = reason, output
+
+
 def stop_worker():
     global _process, _connection, _model_path
     process, connection = _process, _connection
@@ -51,7 +58,7 @@ def _serve(connection, path):
                     parts.append(content)
                 finished = choice.get('finish_reason') or finished
             if finished != 'stop':
-                connection.send({'error': 'incomplete'})
+                connection.send({'error': 'incomplete', 'output': ''.join(parts), 'finish_reason': finished})
             else:
                 connection.send({'answer': {'explanation': ''.join(parts).strip(),
                                             'source_ids': source_ids}})
@@ -83,7 +90,7 @@ def request_generation(path, messages, source_ids, timeout=30):
                 break
             phase = result['phase']
         if 'answer' not in result:
-            raise ValueError('The model did not finish an answer')
+            raise ModelOutputError(result.get('finish_reason') or result.get('error'), result.get('output', ''))
         return result['answer']
     except (EOFError, BrokenPipeError, OSError, ValueError) as exc:
         stop_worker()
