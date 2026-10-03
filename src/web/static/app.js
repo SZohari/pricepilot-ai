@@ -1,4 +1,4 @@
-import {assistantPage,bindAssistant,disposeAssistant} from './assistant.js';
+import {assistantPage,bindAssistant,disposeAssistant} from './assistant.js?v=1.8.1';
 import {journeyPage,bindJourney,disposeJourney} from './journey.js';
 import {parseRoute,experienceNavigation} from './navigation.js';
 import {retailPage,bindRetail,disposeRetail} from './retail.js';

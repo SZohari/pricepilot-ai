@@ -20,6 +20,8 @@ def test_static_and_security(web):
     assert page.status_code == 200
     assert "/static/app.js" in page.text
     assert "script-src 'self'" in page.headers["Content-Security-Policy"]
+    assert page.headers['Cache-Control'] == 'no-cache'
+    assert web.get('/static/assistant.js').headers['Cache-Control'] == 'no-cache'
     assert web.get("/static/app.css").status_code == 200
     assert web.get("/",headers={"host":"evil.example"}).status_code == 400
 

@@ -15,19 +15,23 @@ router = APIRouter(prefix="/api/v1/assistant", tags=["Pricing assistant"])
 MODEL_CONFIG = Path.home() / ".config" / "pricepilot" / "assistant.json"
 
 
+def owner_config():
+    try:
+        with MODEL_CONFIG.open(encoding='utf-8') as handle:
+            config = json.loads(handle.read(4097))
+        return config if isinstance(config, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 def model_path():
     explicit = os.getenv("PRICEPILOT_GGUF_MODEL_PATH")
     if explicit is not None:
         return explicit.strip()
     # Owner-only configuration for hosts whose process command cannot be edited.
     # No request value, uploaded note or demo workspace can choose this path.
-    try:
-        with MODEL_CONFIG.open(encoding="utf-8") as handle:
-            config = json.loads(handle.read(4097))
-        path = config.get("gguf_model_path", "")
-        return path if isinstance(path, str) and Path(path).is_absolute() else ""
-    except (OSError, ValueError, AttributeError):
-        return ""
+    path = owner_config().get("gguf_model_path", "")
+    return path if isinstance(path, str) and Path(path).is_absolute() else ""
 
 
 def settings():
@@ -38,6 +42,31 @@ def settings():
     # A server-owned embedded model works publicly; an owner's laptop is not a public endpoint.
     model = os.getenv("PRICEPILOT_OLLAMA_MODEL", "").strip() if os.getenv("PRICEPILOT_PUBLIC_DEMO") != "1" else ""
     return extra, "ollama" if extra and model else None, model
+
+
+def warm_assistant():
+    """Opt-in startup preparation, using no customer question or shop data."""
+    if owner_config().get('warm_on_startup') is not True:
+        return
+    extra, backend, path = settings()
+    if not extra or backend != 'embedded':
+        return
+    # Load optional imports before accepting requests on a slow shared host.
+    try:
+        from langgraph.graph import StateGraph  # noqa: F401
+        from src.infrastructure.assistant_model import MODEL_SLOT
+        from src.infrastructure.assistant_worker import request_generation
+    except ImportError:
+        return
+    if not MODEL_SLOT.acquire(blocking=False):
+        return
+    try:
+        request_generation(path, [{'role':'user', 'content':'Choose option 0.'}], ['startup'])
+    except (OSError, ValueError):
+        import logging
+        logging.getLogger(__name__).warning('Assistant warm-up failed; source mode remains available')
+    finally:
+        MODEL_SLOT.release()
 
 
 @router.get("/capabilities")

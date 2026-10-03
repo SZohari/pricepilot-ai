@@ -95,6 +95,8 @@ def create_app():
 
     @asynccontextmanager
     async def lifespan(app):
+        from src.api.assistant import warm_assistant
+        await asyncio.to_thread(warm_assistant)
         yield
         from src.infrastructure.assistant_worker import stop_worker
         stop_worker()
@@ -102,7 +104,7 @@ def create_app():
         if persistent:
             persistent.repository.close()
 
-    app = FastAPI(title="PricePilot workspace", version="1.8.0", lifespan=lifespan)
+    app = FastAPI(title="PricePilot workspace", version="1.8.1", lifespan=lifespan)
     hosts=["localhost", "127.0.0.1", "[::1]", "testserver"]
     hosts += [h.strip() for h in os.getenv("PRICEPILOT_ALLOWED_HOSTS", "").split(",") if h.strip()]
     if os.getenv("RENDER_EXTERNAL_HOSTNAME"): hosts.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
@@ -142,6 +144,10 @@ def create_app():
         )
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+        elif request.url.path == '/' or request.url.path.endswith(('.js', '.css', '.html')):
+            # Unbundled modules have stable URLs: revalidate so a deploy cannot
+            # leave old controls describing a new API's behaviour.
+            response.headers['Cache-Control'] = 'no-cache'
         return response
 
     def service(request: Request):

@@ -255,3 +255,26 @@ def test_owner_model_config_is_bounded_and_environment_has_priority(monkeypatch,
         assert assistant.model_path() == ''
 
 
+def test_startup_warmup_is_owner_opt_in_and_failure_does_not_break_the_app(monkeypatch, tmp_path):
+    from src.api import assistant
+    from src.infrastructure import assistant_worker
+    config = tmp_path/'assistant.json'
+    monkeypatch.setattr(assistant, 'MODEL_CONFIG', config)
+    calls = []
+    monkeypatch.setattr(assistant, 'settings', lambda: calls.append('settings') or (True, 'embedded', 'test.gguf'))
+    assistant.warm_assistant()
+    assert not calls
+    if find_spec('langgraph') is None:
+        return
+    config.write_text('{"warm_on_startup":true}')
+    def timeout(*args):
+        calls.append(args)
+        raise TimeoutError('native load stalled')
+    monkeypatch.setattr(assistant_worker, 'request_generation', timeout)
+    assistant.warm_assistant()
+    assert calls[-1][1] == [{'role':'user','content':'Choose option 0.'}]
+    # Failure releases admission; later startup preparation is still possible.
+    assistant.warm_assistant()
+    assert len(calls) == 4
+
+

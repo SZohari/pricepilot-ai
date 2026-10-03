@@ -112,7 +112,7 @@ export async function bindAssistant(S,main,api,toast){
     if(documents.length&&(note.title.trim().length<2||note.text.trim().length<10)){status('Give your note a title and at least 10 characters of context.');return;}
     const body={question:a.question,mode:a.mode,documents,analysis:{...context(),candidate_price:Number(f.elements.candidate.value).toFixed(2),cost_change_pct:f.elements.cost_change.value}};
     const token=++generation;pending=true;f.querySelector('button[type=submit]').disabled=true;
-    status(a.mode==='rag'?'Checking the scenario and asking the model… This may take a moment.':'Checking the scenario and finding relevant sources…');
+    status(a.mode==='rag'?'Checking the scenario and asking the model… The free demo can take up to 40 seconds.':'Checking the scenario and finding relevant sources…');
     root.querySelector('#assistant-output').setAttribute('aria-busy','true');
     root.querySelector('#assistant-output').innerHTML='<div class="assistant-placeholder"><h2>Following the evidence…</h2><p>Checking this scenario and finding the sources behind the answer.</p></div>';
     try{const result=await api('/api/v1/assistant/ask',{method:'POST',body});if(!valid()||token!==generation)return;

@@ -102,6 +102,13 @@ is not editable through the app. The environment variable takes precedence;
 setting it to an empty string disables this backend. Missing or invalid config
 keeps Evidence mode available.
 
+On a slow host, add `"warm_on_startup": true` to the owner configuration. Startup
+then loads the optional graph libraries and primes the model with a short neutral
+selection before accepting requests. No product, question or visitor note is used.
+This trades a longer server restart for avoiding model loading inside the first
+visitor's question. Warm-up failure is caught; the main app still starts. The
+small CPU model is not instant: use Evidence mode for the quickest calculations.
+
 The smaller candidate for the free 512 MiB host is SmolLM2-135M-Instruct Q4_K_M
 (English, Apache-2.0, 105,454,432 bytes). This is a very small model, not a trained pricing
 expert. Free-form trials produced unsupported numerical and customer claims even
