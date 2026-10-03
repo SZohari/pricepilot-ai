@@ -43,7 +43,7 @@ def embedded_generator(path):
             raise OSError("The demo model is busy; please try again shortly")
         try:
             from src.infrastructure.assistant_worker import request_generation
-            context = sources[:5]
+            context = sources[:3]
             selection = request_generation(path, model_messages(question, context, structured=False),
                                            [s["id"] for s in context])
             chosen = {s['id']: s for s in context}[selection['selected_source']]
